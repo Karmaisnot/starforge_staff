@@ -89,3 +89,12 @@
   color: var(--sf-ink);
   outline: none;
 }
+
+
+/* Edit-profile modal + logged-out state */
+.editForm { display: flex; flex-direction: column; gap: 14px; }
+.editField { display: flex; flex-direction: column; gap: 6px; }
+.editField > span { font-size: 12px; font-weight: 600; color: var(--sf-ink-2); }
+.editInput { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--sf-border); background: var(--sf-bg); font-family: inherit; font-size: 14px; color: var(--sf-ink); outline: none; }
+.editInput:focus { border-color: var(--sf-primary); }
+.loggedOut { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 60vh; text-align: center; }

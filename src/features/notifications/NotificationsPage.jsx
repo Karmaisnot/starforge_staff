@@ -12,7 +12,12 @@ export function NotificationsPage() {
   const toast = useToast();
   const { t } = useT();
   const [filter, setFilter] = useState('all');
+  const [read, setRead] = useState({});
   const state = useNotificationsPage();
+  const markRead = (key, title) => {
+    setRead((r) => ({ ...r, [key]: true }));
+    toast(title);
+  };
 
   return (
     <AsyncBoundary state={state}>
@@ -45,8 +50,15 @@ export function NotificationsPage() {
                     .filter((it) => filter === 'all' || matchesFilter(it, filter))
                     .map((it, i) => {
                       const c = notificationToneStyle(it.tone);
+                      const key = `${g.label}-${i}`;
+                      const isRead = read[key];
                       return (
-                        <button key={i} className={styles.row} onClick={() => toast(it.title)}>
+                        <button
+                          key={i}
+                          className={styles.row}
+                          style={{ opacity: isRead ? 0.5 : 1 }}
+                          onClick={() => markRead(key, it.title)}
+                        >
                           <div className={styles.icon} style={{ background: c.bg, color: c.fg, borderColor: c.border }}>
                             {it.icon === 'AI' ? (
                               <span className="sf-serif" style={{ fontWeight: 600, fontSize: 14 }}>
@@ -81,8 +93,17 @@ export function NotificationsPage() {
 }
 
 function matchesFilter(item, filter) {
-  if (filter === 'ai') return item.tone === 'ai';
-  if (filter === 'print') return item.icon === 'print';
-  if (filter === 'msg') return item.icon === 'chat';
-  return true;
+  switch (filter) {
+    case 'ai':
+      return item.tone === 'ai';
+    case 'print':
+      return item.icon === 'print';
+    case 'msg':
+      return item.icon === 'chat';
+    case 'all':
+      return true;
+    default:
+      // Unknown filter key: match nothing rather than silently showing everything.
+      return false;
+  }
 }

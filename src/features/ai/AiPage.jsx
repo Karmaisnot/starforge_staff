@@ -17,6 +17,7 @@ export function AiPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState('');
   const [sent, setSent] = useState([]);
+  const [query, setQuery] = useState('');
 
   const send = (text) => {
     const value = (text ?? draft).trim();
@@ -31,6 +32,31 @@ export function AiPage() {
       {(d) => {
         const activeId = selectedId ?? d.active?.id;
         const t = d.workspace.transcript;
+        // The loaded workspace (transcript + analysis) belongs to one conversation.
+        // Other conversations have no transcript yet, so we show a clean start state
+        // instead of mislabeling this conversation's data under their name.
+        const activeConv = d.conversations.find((c) => c.id === activeId);
+        const isWorkspaceConv = activeId === d.active?.id;
+        const filteredConvs = d.conversations.filter((g) =>
+          String(g.name).toLowerCase().includes(query.toLowerCase()),
+        );
+        const downloadChat = () => {
+          const text = [
+            String(activeConv?.name ?? ''),
+            '',
+            t.outgoing1,
+            `${t.reply.leadItalic}${t.reply.leadRest}`,
+            t.outgoing2,
+            ...sent,
+          ].join('\n');
+          const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${String(activeConv?.name ?? 'chat')}.txt`;
+          a.click();
+          URL.revokeObjectURL(url);
+          toast(tt('ai.downloaded'));
+        };
         return (
           <>
             <PageHeader
@@ -56,15 +82,24 @@ export function AiPage() {
             <div className={styles.layout}>
               {/* List */}
               <Card padded={false} className={styles.list}>
-                <div className={styles.search} onClick={() => toast(tt('ai.searchConv'))}>
+                <div className={styles.search}>
                   <Icon name="search" size={14} style={{ color: 'var(--sf-muted)' }} />
-                  <span>{tt('ai.searchConv')}</span>
+                  <input
+                    className={styles.searchInput}
+                    placeholder={tt('ai.searchConv')}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
                 </div>
-                {d.conversations.map((g) => (
+                {filteredConvs.map((g) => (
                   <button
                     key={g.id}
                     className={`${styles.group} ${activeId === g.id ? styles.on : ''}`}
-                    onClick={() => setSelectedId(g.id)}
+                    onClick={() => {
+                      setSelectedId(g.id);
+                      setSent([]);
+                      setDraft('');
+                    }}
                   >
                     <div className={styles.groupMark} style={{ background: g.color }}>
                       {g.isAll ? (
@@ -98,17 +133,17 @@ export function AiPage() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 14, fontWeight: 700 }}>
-                          {d.conversations.find((c) => c.id === activeId)?.name ?? '9-B Algebra'}
+                          {activeConv?.name ?? '9-B Algebra'}
                         </span>
                         <AiBadge compact>{tt('ai.group')}</AiBadge>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
-                        24 {tt('ai.studentsCtx')}
+                        {activeConv?.sub ?? tt('ai.studentsCtx')}
                       </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className={styles.iconBtn} onClick={() => toast(tt('ai.downloaded'))}>
+                    <button className={styles.iconBtn} onClick={downloadChat}>
                       <Icon name="download" size={14} />
                     </button>
                     <button className={styles.iconBtn} onClick={() => toast(tt('ai.menu'))}>
@@ -126,6 +161,8 @@ export function AiPage() {
                 </div>
 
                 <div className={styles.body}>
+                  {isWorkspaceConv && (
+                    <>
                   <div className={styles.out}>{t.outgoing1}</div>
 
                   <div className={styles.inWrap}>
@@ -186,6 +223,21 @@ export function AiPage() {
                   </div>
 
                   <div className={styles.out}>{t.outgoing2}</div>
+                    </>
+                  )}
+
+                  {!isWorkspaceConv && sent.length === 0 && (
+                    <div
+                      style={{
+                        padding: '48px 24px',
+                        textAlign: 'center',
+                        color: 'var(--sf-muted)',
+                        fontSize: 13,
+                      }}
+                    >
+                      {tt('ai.emptyHint')}
+                    </div>
+                  )}
 
                   {sent.map((m, i) => (
                     <div key={i} className={styles.out}>

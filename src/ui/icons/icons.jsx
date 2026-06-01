@@ -153,6 +153,15 @@ export const ICONS = {
   shield: { children: <path d="M12 3 L20 6 V12 c0 5-4 8-8 9 c-4-1-8-4-8-9 V6 Z" /> },
   flag: { children: <path d="M5 21 V4 H15 L13 8 L15 12 H5" /> },
   download: { children: <path d="M12 4 V16 M6 10 L12 16 L18 10 M4 20 H20" /> },
+  sun: {
+    children: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2 V4 M12 20 V22 M2 12 H4 M20 12 H22 M4.9 4.9 L6.3 6.3 M17.7 17.7 L19.1 19.1 M4.9 19.1 L6.3 17.7 M17.7 6.3 L19.1 4.9" />
+      </>
+    ),
+  },
+  moon: { children: <path d="M20 14.5 A8.5 8.5 0 0 1 9.5 4 A7 7 0 1 0 20 14.5 Z" /> },
 };
 
 export const ICON_NAMES = Object.keys(ICONS);

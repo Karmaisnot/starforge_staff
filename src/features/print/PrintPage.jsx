@@ -10,7 +10,7 @@ import styles from './print.module.css';
 
 const PAGES_PER_COPY = 8;
 
-function QuickPrint({ library }) {
+function QuickPrint({ library, onAdd }) {
   const toast = useToast();
   const { t: tt } = useT();
   const [source, setSource] = useState('library');
@@ -20,6 +20,17 @@ function QuickPrint({ library }) {
   const [side, setSide] = useState('2');
 
   const total = copies * PAGES_PER_COPY;
+
+  const addToQueue = () => {
+    onAdd({
+      doc: `${tt('print.quick')} · ${format}`,
+      copies,
+      size: `${format} · ${color === 'bw' ? tt('print.bw') : tt('print.colorful')}`,
+      printer: 'HP LaserJet',
+      icon: 'doc',
+    });
+    toast(`${total} ${tt('print.pages')} ${tt('print.queueToast')}`, 'success');
+  };
 
   return (
     <Card title={tt('print.quick')}>
@@ -107,13 +118,7 @@ function QuickPrint({ library }) {
             {format} · {color === 'bw' ? tt('print.bw') : tt('print.colorful')} · {side} {tt('print.sided')} · HP LaserJet
           </div>
         </div>
-        <Button
-          variant="primary"
-          block
-          icon="arrowR"
-          iconRight
-          onClick={() => toast(`${total} ${tt('print.pages')} ${tt('print.queueToast')}`, 'success')}
-        >
+        <Button variant="primary" block icon="arrowR" iconRight onClick={addToQueue}>
           {tt('print.addQueue')}
         </Button>
       </div>
@@ -125,6 +130,28 @@ export function PrintPage() {
   const toast = useToast();
   const { t: tt } = useT();
   const state = usePrintPage();
+  const [extraJobs, setExtraJobs] = useState([]);
+  const [cancelled, setCancelled] = useState({});
+
+  const cancelJob = (job) => {
+    setExtraJobs((list) => list.filter((j) => j.id !== job.id));
+    setCancelled((c) => ({ ...c, [job.id]: true }));
+    toast(`${tt('print.cancelled')} · ${job.doc}`);
+  };
+
+  const addJob = (job) => {
+    setExtraJobs((list) => [
+      { id: `job-${Date.now()}`, state: 'queued', progress: 0, eta: tt('print.queued'), ...job },
+      ...list,
+    ]);
+  };
+  const sendToPrinter = (printer) => {
+    addJob({ doc: printer.name, copies: 1, size: printer.sizes, printer: printer.name, icon: 'print' });
+    toast(printer.name, 'success');
+  };
+  const focusQuick = () => {
+    document.getElementById('sf-quick-print')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   return (
     <AsyncBoundary state={state}>
@@ -134,7 +161,7 @@ export function PrintPage() {
             title={tt('print.title')}
             subtitle={tt('print.subtitle')}
             right={
-              <Button variant="primary" icon="plus" onClick={() => toast(tt('print.newPrint'))}>
+              <Button variant="primary" icon="plus" onClick={focusQuick}>
                 {tt('print.newPrint')}
               </Button>
             }
@@ -144,7 +171,7 @@ export function PrintPage() {
             <div>
               <h3 className={styles.sectionH}>{tt('print.myQueue')}</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {d.jobs.map((j) => (
+                {[...extraJobs, ...d.jobs].filter((j) => !cancelled[j.id]).map((j) => (
                   <Card key={j.id} padded={false}>
                     <div style={{ display: 'flex', gap: 14, padding: 16, alignItems: 'center' }}>
                       <div className={styles.docThumb}>
@@ -175,8 +202,8 @@ export function PrintPage() {
                           {j.eta}
                         </div>
                       </div>
-                      <button className={styles.iconBtn} onClick={() => toast(j.doc)}>
-                        <Icon name="more" size={16} />
+                      <button className={styles.iconBtn} onClick={() => cancelJob(j)} aria-label={tt('print.cancelled')}>
+                        <Icon name="x" size={16} />
                       </button>
                     </div>
                   </Card>
@@ -223,7 +250,7 @@ export function PrintPage() {
                         <Icon name="clock" size={14} style={{ color: p.accent }} />
                         <span style={{ flex: 1 }}>{p.eta}</span>
                         {p.status !== 'locked' && (
-                          <Button variant="soft" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => toast(p.name, 'success')}>
+                          <Button variant="soft" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => sendToPrinter(p)}>
                             {tt('print.send')}
                           </Button>
                         )}
@@ -234,7 +261,9 @@ export function PrintPage() {
               </div>
             </div>
 
-            <QuickPrint library={d.library} />
+            <div id="sf-quick-print">
+              <QuickPrint library={d.library} onAdd={addJob} />
+            </div>
           </div>
         </>
       )}

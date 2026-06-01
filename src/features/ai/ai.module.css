@@ -308,3 +308,8 @@
 .ctxRow:last-child {
   border-bottom: none;
 }
+
+
+/* Conversation search input */
+.searchInput { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; color: var(--sf-ink); width: 100%; }
+.searchInput::placeholder { color: var(--sf-muted); }

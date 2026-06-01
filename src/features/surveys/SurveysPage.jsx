@@ -1,28 +1,90 @@
+import { useState } from 'react';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
-import { Button, Card, Chip, Icon, ProgressBar } from '@/ui';
+import { Button, Card, Chip, Icon, Modal, ProgressBar, Segmented } from '@/ui';
 import { useSurveysPage } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './surveys.module.css';
 
+function SurveyModal({ survey, onClose, onSubmit }) {
+  const { t } = useT();
+  const [rating, setRating] = useState('4');
+  const [comment, setComment] = useState('');
+  if (!survey) return null;
+  return (
+    <Modal
+      open={Boolean(survey)}
+      onClose={onClose}
+      title={survey.title}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button variant="primary" icon="check" onClick={() => onSubmit(survey, { rating, comment })}>
+            {t('surveys.submit')}
+          </Button>
+        </>
+      }
+    >
+      <div className={styles.modalMeta}>
+        {survey.issuer} · {survey.questions} {t('surveys.question')} · {survey.estimate}
+      </div>
+      <div className={styles.modalField}>
+        <span>{t('surveys.rateQ')}</span>
+        <Segmented
+          value={rating}
+          onChange={setRating}
+          options={['1', '2', '3', '4', '5'].map((v) => ({ value: v, label: v }))}
+        />
+      </div>
+      <div className={styles.modalField}>
+        <span>{t('surveys.commentQ')}</span>
+        <textarea
+          className={styles.modalTextarea}
+          rows={3}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
+      </div>
+    </Modal>
+  );
+}
+
 export function SurveysPage() {
   const toast = useToast();
   const { t } = useT();
   const state = useSurveysPage();
+  const [open, setOpen] = useState(null);
+  const [done, setDone] = useState([]); // completed survey ids
+  const [extraHistory, setExtraHistory] = useState([]);
+
+  const submit = (survey, answers) => {
+    setDone((ids) => [...ids, survey.id]);
+    setExtraHistory((h) => [
+      { title: survey.title, issuer: survey.issuer, status: t('surveys.submitted'), date: t('surveys.now'), skipped: false, rating: answers.rating },
+      ...h,
+    ]);
+    setOpen(null);
+    toast(`${survey.title} · ${answers.rating}/5`, 'success');
+  };
 
   return (
     <AsyncBoundary state={state}>
-      {(d) => (
+      {(d) => {
+        const active = d.active.filter((s) => !done.includes(s.id));
+        const history = [...extraHistory, ...d.history];
+        return (
         <>
           <PageHeader
             title={t('surveys.title')}
             subtitle={t('surveys.subtitle')}
-            right={<Chip tone="danger">{t('surveys.unsubmitted')}</Chip>}
+            right={<Chip tone="danger">{active.length} {t('surveys.unsubmitted')}</Chip>}
           />
 
           <div className={styles.grid}>
-            {d.active.map((s) => (
+            {active.map((s) => (
               <div key={s.id} className={`${styles.card} ${s.urgent ? styles.urgent : ''}`}>
                 {s.urgent && <div className={styles.glow} />}
                 <div style={{ position: 'relative' }}>
@@ -55,7 +117,7 @@ export function SurveysPage() {
                         </div>
                       )}
                     </div>
-                    <Button variant="ink" icon="arrowR" iconRight iconSize={12} onClick={() => toast(s.title)}>
+                    <Button variant="ink" icon="arrowR" iconRight iconSize={12} onClick={() => setOpen(s)}>
                       {s.progress > 0 ? t('surveys.continue') : t('surveys.start')}
                     </Button>
                   </div>
@@ -66,7 +128,7 @@ export function SurveysPage() {
 
           <h3 className={styles.sectionH}>{t('surveys.historyTitle')}</h3>
           <Card padded={false}>
-            {d.history.map((p, i) => (
+            {history.map((p, i) => (
               <button key={i} className={styles.historyRow} onClick={() => toast(p.title)}>
                 <div
                   className={styles.historyIcon}
@@ -84,8 +146,11 @@ export function SurveysPage() {
               </button>
             ))}
           </Card>
+
+          <SurveyModal survey={open} onClose={() => setOpen(null)} onSubmit={submit} />
         </>
-      )}
+        );
+      }}
     </AsyncBoundary>
   );
 }

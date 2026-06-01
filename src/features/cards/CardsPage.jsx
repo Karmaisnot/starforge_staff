@@ -62,7 +62,11 @@ function GiveCardModal({ open, onClose, types }) {
         </label>
         <label className={styles.field}>
           <span>{tr('cards.fType')}</span>
-          <select className={styles.select} value={type} onChange={(e) => setType(e.target.value)}>
+          <select
+            className={styles.select}
+            value={type || kindTypes[0]?.name || ''}
+            onChange={(e) => setType(e.target.value)}
+          >
             {kindTypes.map((t) => (
               <option key={t.name} value={t.name}>
                 {t.name} · {t.subtitle}

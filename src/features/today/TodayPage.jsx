@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
@@ -8,6 +9,7 @@ import {
   Card,
   Chip,
   Icon,
+  Modal,
   ProgressBar,
   Stat,
   StarMark,
@@ -16,15 +18,19 @@ import {
 import { slotRailColor } from '@/domain/models/lesson.js';
 import { priorityColor } from '@/domain/models/task.js';
 import { useToday } from '@/hooks/data.js';
-import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './today.module.css';
 
+const WIDGET_KEYS = ['schedule', 'recentCards', 'pendingTasks', 'printQueue', 'spotlight', 'activity'];
+
 export function TodayPage() {
   const navigate = useNavigate();
-  const toast = useToast();
   const { t } = useT();
   const state = useToday();
+  const [widgetsOpen, setWidgetsOpen] = useState(false);
+  const [hidden, setHidden] = useState({});
+  const show = (key) => !hidden[key];
+  const toggleWidget = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
   const stop = (fn) => (e) => {
     e.stopPropagation();
     fn();
@@ -44,7 +50,7 @@ export function TodayPage() {
             subtitle={d.meta.summary}
             right={
               <>
-                <Button variant="soft" icon="edit" onClick={() => toast(t('today.widgets'))}>
+                <Button variant="soft" icon="edit" onClick={() => setWidgetsOpen(true)}>
                   {t('today.widgets')}
                 </Button>
                 <Button variant="primary" icon="plus" onClick={() => navigate('/cards')}>
@@ -112,13 +118,13 @@ export function TodayPage() {
                     </div>
                   </div>
                   <div className={styles.heroActions}>
-                    <Button variant="cream" icon="check" onClick={stop(() => toast(t('today.attendanceOpened')))}>
+                    <Button variant="cream" icon="check" onClick={stop(() => navigate('/cohorts'))}>
                       {t('today.takeAttendance')}
                     </Button>
                     <Button variant="cream-ghost" onClick={stop(() => navigate('/materials'))}>
                       {t('today.materials')}
                     </Button>
-                    <Button variant="cream-ghost" onClick={stop(() => toast(t('today.lessonPlan')))}>
+                    <Button variant="cream-ghost" onClick={stop(() => navigate('/materials'))}>
                       {t('today.lessonPlan')}
                     </Button>
                   </div>
@@ -127,6 +133,7 @@ export function TodayPage() {
 
               {/* Schedule */}
               <Card
+                style={{ display: show('schedule') ? undefined : 'none' }}
                 title={t('today.scheduleTitle')}
                 padded={false}
                 action={
@@ -154,6 +161,7 @@ export function TodayPage() {
 
               {/* Recent cards */}
               <Card
+                style={{ display: show('recentCards') ? undefined : 'none' }}
                 title={t('today.recentCards')}
                 action={
                   <a className={styles.link} onClick={() => navigate('/cards')}>
@@ -178,6 +186,7 @@ export function TodayPage() {
 
               {/* Pending tasks */}
               <Card
+                style={{ display: show('pendingTasks') ? undefined : 'none' }}
                 title={t('today.pendingTitle')}
                 padded={false}
                 action={
@@ -244,7 +253,13 @@ export function TodayPage() {
                       </Chip>
                     ))}
                   </div>
-                  <Button variant="ink" icon="arrowR" iconRight style={{ marginTop: 14 }}>
+                  <Button
+                    variant="ink"
+                    icon="arrowR"
+                    iconRight
+                    style={{ marginTop: 14 }}
+                    onClick={stop(() => navigate('/ai'))}
+                  >
                     {t('today.goToChat')}
                   </Button>
                 </div>
@@ -252,6 +267,7 @@ export function TodayPage() {
 
               {/* Print queue */}
               <Card
+                style={{ display: show('printQueue') ? undefined : 'none' }}
                 title={t('today.printQueue')}
                 padded={false}
                 action={
@@ -302,6 +318,7 @@ export function TodayPage() {
 
               {/* Spotlight */}
               <Card
+                style={{ display: show('spotlight') ? undefined : 'none' }}
                 title={t('today.spotlight')}
                 action={
                   <a className={styles.link} onClick={() => navigate('/cohorts')}>
@@ -332,7 +349,7 @@ export function TodayPage() {
               </Card>
 
               {/* Activity */}
-              <Card title={t('today.activity')}>
+              <Card style={{ display: show('activity') ? undefined : 'none' }} title={t('today.activity')}>
                 {d.activity.map((a, i) => (
                   <div key={i} className={styles.activityRow}>
                     {a.who === 'AI' ? (
@@ -357,6 +374,39 @@ export function TodayPage() {
               </Card>
             </div>
           </div>
+
+          <Modal
+            open={widgetsOpen}
+            onClose={() => setWidgetsOpen(false)}
+            title={t('today.widgets')}
+            footer={
+              <Button variant="primary" icon="check" onClick={() => setWidgetsOpen(false)}>
+                {t('common.continue')}
+              </Button>
+            }
+          >
+            <div className={styles.widgetList}>
+              {WIDGET_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={styles.widgetRow}
+                  onClick={() => toggleWidget(key)}
+                >
+                  <span>{t(`today.w_${key}`)}</span>
+                  <span
+                    className={styles.widgetToggle}
+                    style={{
+                      background: show(key) ? 'var(--sf-primary)' : 'var(--sf-surface-3)',
+                    }}
+                    data-on={show(key) ? '1' : '0'}
+                  >
+                    <span className={styles.widgetKnob} />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </Modal>
         </>
       )}
     </AsyncBoundary>

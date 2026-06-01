@@ -185,3 +185,27 @@
   align-items: center;
   justify-content: center;
 }
+
+
+/* New-task modal form */
+.form { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > span { font-size: 12px; font-weight: 600; color: var(--sf-ink-2); }
+.inputCtl { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--sf-border); background: var(--sf-bg); font-family: inherit; font-size: 14px; color: var(--sf-ink); outline: none; }
+.inputCtl:focus { border-color: var(--sf-primary); }
+
+
+/* Calendar view */
+.calHead { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--sf-border); }
+.calMonth { font-size: 15px; font-weight: 700; text-transform: capitalize; min-width: 170px; text-align: center; }
+.calWeekdays { display: grid; grid-template-columns: repeat(7, 1fr); padding: 8px 8px 0; }
+.calWeekdays > div { text-align: center; font-size: 11px; font-weight: 600; color: var(--sf-muted); padding: 4px 0; }
+.calGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 8px; }
+.calCell { min-height: 92px; border: 1px solid var(--sf-border); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; background: var(--sf-surface); }
+.calEmpty { background: transparent; border-color: transparent; }
+.calDay { font-size: 12px; font-weight: 700; color: var(--sf-ink-2); }
+.calTask { display: flex; gap: 4px; align-items: center; width: 100%; text-align: left; font-size: 11px; line-height: 1.25; padding: 4px 6px; border: none; border-left: 3px solid var(--sf-primary); border-radius: 6px; background: var(--sf-surface-2); cursor: pointer; color: var(--sf-ink); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.calTask:hover { background: var(--sf-surface-3); }
+.calUnsched { padding: 12px 16px; border-top: 1px solid var(--sf-border); }
+.calUnschedHead { font-size: 12px; font-weight: 700; color: var(--sf-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.calUnschedList { display: flex; flex-direction: column; gap: 6px; }

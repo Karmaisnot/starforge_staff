@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Icon } from '@/ui';
 import { Palette } from '@/domain/enums.js';
 import { useTheme } from '@/hooks/useTheme.js';
+import { useT } from '@/hooks/useT.js';
 import styles from './ThemeSwitcher.module.css';
 
 const PALETTES = [
@@ -14,6 +15,7 @@ const PALETTES = [
 /** The palette/dark controls — reusable inline (e.g. in Settings). */
 export function ThemeControls() {
   const { palette, dark, setPalette, toggleDark } = useTheme();
+  const { t } = useT();
   return (
     <div className={styles.controls}>
       <button
@@ -22,8 +24,8 @@ export function ThemeControls() {
         onClick={toggleDark}
         aria-pressed={dark}
       >
-        <Icon name={dark ? 'settings' : 'settings'} size={16} />
-        <span>Qora mavzu · Dark mode</span>
+        <Icon name={dark ? 'moon' : 'sun'} size={16} />
+        <span>{t('settings.dark')}</span>
         <span className={`${styles.toggle} ${dark ? styles.toggleOn : ''}`}>
           <span className={styles.knob} />
         </span>

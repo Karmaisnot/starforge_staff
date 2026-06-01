@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
-import { Avatar, Button, Card, Chip, Icon, StarMark } from '@/ui';
+import { Avatar, Button, Card, Chip, Icon, Modal, StarMark } from '@/ui';
 import { useMgmtThreads, useMgmtTranscript } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
@@ -15,6 +15,13 @@ function ChatPanel({ thread }) {
   const { data: transcript } = useMgmtTranscript(thread.id);
   const [draft, setDraft] = useState('');
   const [sent, setSent] = useState([]);
+  const fileRef = useRef(null);
+
+  const onAttach = (e) => {
+    const file = e.target.files?.[0];
+    if (file) setDraft((d) => `${d}${d ? ' ' : ''}📎 ${file.name}`.trim());
+    e.target.value = '';
+  };
 
   const send = (e) => {
     e.preventDefault();
@@ -95,7 +102,8 @@ function ChatPanel({ thread }) {
       </div>
 
       <form className={styles.input} onSubmit={send}>
-        <button type="button" className={styles.iconBtn} onClick={() => toast(thread.name)}>
+        <input ref={fileRef} type="file" hidden onChange={onAttach} />
+        <button type="button" className={styles.iconBtn} onClick={() => fileRef.current?.click()} aria-label={tt('mgmt.attach')}>
           <Icon name="attach" size={16} />
         </button>
         <input
@@ -112,15 +120,77 @@ function ChatPanel({ thread }) {
   );
 }
 
+function ComposeModal({ open, onClose, onCreate }) {
+  const { t: tt } = useT();
+  const [name, setName] = useState('');
+  const [message, setMessage] = useState('');
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!name.trim() || !message.trim()) return;
+    onCreate({ name: name.trim(), message: message.trim() });
+    setName('');
+    setMessage('');
+    onClose();
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={tt('common.newMessage')}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            {tt('common.cancel')}
+          </Button>
+          <Button variant="primary" icon="send" onClick={submit}>
+            {tt('mgmt.send')}
+          </Button>
+        </>
+      }
+    >
+      <form onSubmit={submit} className={styles.composeForm}>
+        <label className={styles.composeField}>
+          <span>{tt('mgmt.recipient')}</span>
+          <input className={styles.composeInput} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        </label>
+        <label className={styles.composeField}>
+          <span>{tt('mgmt.message')}</span>
+          <textarea
+            className={styles.composeInput}
+            rows={3}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+        </label>
+      </form>
+    </Modal>
+  );
+}
+
 export function MgmtPage() {
   const toast = useToast();
   const { t: tt } = useT();
   const [openId, setOpenId] = useState(1);
+  const [extraThreads, setExtraThreads] = useState([]);
+  const [composeOpen, setComposeOpen] = useState(false);
   const state = useMgmtThreads();
+
+  const createThread = ({ name, message }) => {
+    const id = `t-${Date.now()}`;
+    setExtraThreads((list) => [
+      { id, name, role: tt('mgmt.newThreadRole'), lastMessage: message, time: tt('mgmt.now'), unread: 0, online: false },
+      ...list,
+    ]);
+    setOpenId(id);
+    toast(tt('mgmt.sent'), 'success');
+  };
 
   return (
     <AsyncBoundary state={state}>
-      {(threads) => {
+      {(loaded) => {
+        const threads = [...extraThreads, ...loaded];
         const cur = threads.find((t) => t.id === openId) ?? threads[0];
         return (
           <>
@@ -128,7 +198,7 @@ export function MgmtPage() {
               title={tt('mgmt.title')}
               subtitle={tt('mgmt.subtitle')}
               right={
-                <Button variant="primary" icon="edit" onClick={() => toast(tt('common.newMessage'))}>
+                <Button variant="primary" icon="edit" onClick={() => setComposeOpen(true)}>
                   {tt('common.newMessage')}
                 </Button>
               }
@@ -173,6 +243,8 @@ export function MgmtPage() {
 
               <ChatPanel thread={cur} />
             </div>
+
+            <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} onCreate={createThread} />
           </>
         );
       }}

@@ -212,3 +212,11 @@
   justify-content: center;
   flex-shrink: 0;
 }
+
+
+/* Compose-message modal */
+.composeForm { display: flex; flex-direction: column; gap: 14px; }
+.composeField { display: flex; flex-direction: column; gap: 6px; }
+.composeField > span { font-size: 12px; font-weight: 600; color: var(--sf-ink-2); }
+.composeInput { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--sf-border); background: var(--sf-bg); font-family: inherit; font-size: 14px; color: var(--sf-ink); outline: none; resize: vertical; }
+.composeInput:focus { border-color: var(--sf-primary); }

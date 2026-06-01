@@ -37,24 +37,6 @@ export function useRoster(cohortId) {
   );
 }
 
-export function useTasksBoard() {
-  const { tasks } = useServices();
-  const { locale } = useT();
-  return useAsync(() => tasks.getBoard(), [locale]);
-}
-
-export function useTasksList() {
-  const { tasks } = useServices();
-  const { locale } = useT();
-  return useAsync(() => tasks.getList(), [locale]);
-}
-
-export function useTaskFilters() {
-  const { tasks } = useServices();
-  const { locale } = useT();
-  return useAsync(() => tasks.getFilters(), [locale]);
-}
-
 export function useCardsPage() {
   const { cards } = useServices();
   const { locale } = useT();
