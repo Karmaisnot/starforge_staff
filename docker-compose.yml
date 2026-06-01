@@ -1,0 +1,23 @@
+# StarForge EDU — container orchestration.
+#   Production image:  docker compose up web
+#   Hot-reload dev:    docker compose --profile dev up dev
+services:
+  web:
+    build:
+      context: .
+      target: runtime
+    image: starforge-edu:latest
+    ports:
+      - '8080:80'
+    restart: unless-stopped
+
+  dev:
+    image: node:22-alpine
+    profiles: ['dev']
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - '5173:5173'
+    volumes:
+      - .:/app
+      - /app/node_modules

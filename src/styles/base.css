@@ -1,0 +1,61 @@
+/* Global base — resets, document chrome, shared utility classes.
+   Component-specific styles live in CSS Modules next to each component. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--sf-font-ui);
+  color: var(--sf-ink);
+  background: var(--sf-bg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01', 'ss02';
+  letter-spacing: -0.005em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* Document scrollbar polish */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sf-border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sf-muted);
+}
+
+/* Shared typographic utilities (used across many components) */
+.sf-mono {
+  font-family: var(--sf-font-mono);
+  font-feature-settings: 'tnum';
+}
+.sf-serif {
+  font-family: var(--sf-font-display);
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+.sf-tnum {
+  font-variant-numeric: tabular-nums;
+}

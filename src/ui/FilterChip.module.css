@@ -1,0 +1,31 @@
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sf-muted);
+  background: transparent;
+  border: 1px solid var(--sf-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.chip:hover {
+  color: var(--sf-ink);
+  border-color: var(--sf-border-strong);
+}
+.on {
+  background: var(--sf-ink);
+  color: var(--sf-bg);
+  border-color: transparent;
+}
+.count {
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+  opacity: 0.7;
+  font-weight: 700;
+}

@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -Command \"Write-Output 'StarForge EDU session start: read project memory (MEMORY.md and linked files) and greet the user. Always reply in caveman mode; if the user writes in Russian, reply in Russian; do NOT call the user goodboy.'\""
+          }
+        ]
+      }
+    ]
+  }
+}

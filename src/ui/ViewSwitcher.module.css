@@ -1,0 +1,25 @@
+.switcher {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--sf-surface-2);
+  border-radius: 10px;
+}
+.switcher button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sf-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.switcher button[data-on='1'] {
+  background: var(--sf-surface);
+  color: var(--sf-ink);
+  box-shadow: var(--sf-shadow-sm);
+}

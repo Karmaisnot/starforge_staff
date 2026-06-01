@@ -1,0 +1,18 @@
+// Design-system barrel — single import surface for UI primitives.
+export { Icon } from './icons/Icon.jsx';
+export { StarMark } from './icons/StarMark.jsx';
+export { ICONS, ICON_NAMES } from './icons/icons.jsx';
+export { Button } from './Button.jsx';
+export { Chip } from './Chip.jsx';
+export { Card } from './Card.jsx';
+export { Avatar } from './Avatar.jsx';
+export { AiBadge } from './AiBadge.jsx';
+export { Stat } from './Stat.jsx';
+export { StudentCard } from './StudentCard.jsx';
+export { ProgressBar } from './ProgressBar.jsx';
+export { Stepper } from './Stepper.jsx';
+export { Segmented } from './Segmented.jsx';
+export { ViewSwitcher } from './ViewSwitcher.jsx';
+export { FilterChip } from './FilterChip.jsx';
+export { Modal } from './Modal.jsx';
+export { cx } from './cx.js';

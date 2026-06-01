@@ -1,0 +1,181 @@
+/* StarForge EDU — design tokens
+   Warm editorial modern, Central Asian geometric undertone.
+   All app surfaces inherit from --sf-* tokens; palettes/dark mode flip values.
+   Fonts are loaded in index.html. */
+
+:root {
+  /* Type */
+  --sf-font-ui: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --sf-font-display: 'Instrument Serif', 'Manrope', serif;
+  --sf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Default palette: SAROY (terracotta) — warm cream, terracotta, saffron */
+  --sf-bg: #fbf6ec;
+  --sf-surface: #fffcf5;
+  --sf-surface-2: #f4ebd8;
+  --sf-surface-3: #eadfc4;
+  --sf-ink: #1f1b16;
+  --sf-ink-2: #3a332a;
+  --sf-muted: #847663;
+  --sf-muted-2: #b0a38b;
+  --sf-border: #e5d9be;
+  --sf-border-strong: #cfc0a0;
+
+  --sf-primary: #b85535; /* terracotta */
+  --sf-primary-hover: #a04524;
+  --sf-primary-soft: #f3d9cc;
+  --sf-primary-ink: #5a2412;
+
+  --sf-accent: #d89a2e; /* saffron */
+  --sf-accent-soft: #f6e4b8;
+  --sf-accent-ink: #6b4810;
+
+  --sf-success: #4f7b3b;
+  --sf-success-soft: #ddeaca;
+  --sf-warn: #c68423;
+  --sf-warn-soft: #f6e4b8;
+  --sf-danger: #b33a2a;
+  --sf-danger-soft: #f3d2cc;
+
+  /* AI gets its own quiet treatment — saffron halo on cream */
+  --sf-ai: #8b5a0f;
+  --sf-ai-bg: linear-gradient(135deg, #f9eac4 0%, #f6dcb0 100%);
+  --sf-ai-border: #e2bc72;
+
+  --sf-shadow-sm: 0 1px 2px rgba(54, 30, 14, 0.06);
+  --sf-shadow-md: 0 6px 18px rgba(54, 30, 14, 0.08), 0 2px 4px rgba(54, 30, 14, 0.04);
+  --sf-shadow-lg: 0 18px 40px rgba(54, 30, 14, 0.12), 0 4px 10px rgba(54, 30, 14, 0.06);
+
+  --sf-radius-sm: 8px;
+  --sf-radius: 14px;
+  --sf-radius-lg: 22px;
+  --sf-radius-xl: 28px;
+}
+
+/* Palette: MARVARID (Pearl) — cool pearl gray + teal accent */
+[data-palette='marvarid'] {
+  --sf-bg: #f2f1ed;
+  --sf-surface: #fbfaf6;
+  --sf-surface-2: #e8e5dc;
+  --sf-surface-3: #ddd9cd;
+  --sf-ink: #1a1f22;
+  --sf-ink-2: #2f363b;
+  --sf-muted: #6c7479;
+  --sf-muted-2: #a0a6aa;
+  --sf-border: #dddad0;
+  --sf-border-strong: #bfbba8;
+
+  --sf-primary: #1f6b66;
+  --sf-primary-hover: #155a56;
+  --sf-primary-soft: #cfe3df;
+  --sf-primary-ink: #0b2e2c;
+
+  --sf-accent: #c4892f;
+  --sf-accent-soft: #f2e2bd;
+  --sf-accent-ink: #5c3e0f;
+
+  --sf-ai: #1f4a5b;
+  --sf-ai-bg: linear-gradient(135deg, #dceaee 0%, #c7dde3 100%);
+  --sf-ai-border: #8fb6bf;
+}
+
+/* Palette: SAMARQAND — deep indigo tilework + saffron */
+[data-palette='samarqand'] {
+  --sf-bg: #f4f1e8;
+  --sf-surface: #fcfaf2;
+  --sf-surface-2: #ece6d3;
+  --sf-surface-3: #ded5bb;
+  --sf-ink: #15182a;
+  --sf-ink-2: #262a40;
+  --sf-muted: #6c6e7a;
+  --sf-muted-2: #a0a1ab;
+  --sf-border: #dcd4ba;
+  --sf-border-strong: #bfb596;
+
+  --sf-primary: #2a3d8f;
+  --sf-primary-hover: #1f2f73;
+  --sf-primary-soft: #d2d8ee;
+  --sf-primary-ink: #121a45;
+
+  --sf-accent: #d8a22a;
+  --sf-accent-soft: #f4e1aa;
+  --sf-accent-ink: #5e4108;
+
+  --sf-ai: #3d2a8f;
+  --sf-ai-bg: linear-gradient(135deg, #e5ddf4 0%, #d2c6ee 100%);
+  --sf-ai-border: #a793d6;
+}
+
+/* Palette: DARYO — sage river + brass */
+[data-palette='daryo'] {
+  --sf-bg: #f1efe6;
+  --sf-surface: #faf8ef;
+  --sf-surface-2: #e5e4d2;
+  --sf-surface-3: #d7d5bd;
+  --sf-ink: #1a1e18;
+  --sf-ink-2: #2f352a;
+  --sf-muted: #6f7264;
+  --sf-muted-2: #a2a593;
+  --sf-border: #d9d6bd;
+  --sf-border-strong: #b7b399;
+
+  --sf-primary: #4f6a3a;
+  --sf-primary-hover: #3e5a29;
+  --sf-primary-soft: #dbe5c7;
+  --sf-primary-ink: #1f2c13;
+
+  --sf-accent: #ba8c2c;
+  --sf-accent-soft: #ecdba8;
+  --sf-accent-ink: #563e08;
+
+  --sf-ai: #6a5128;
+  --sf-ai-bg: linear-gradient(135deg, #ede2c2 0%, #decba0 100%);
+  --sf-ai-border: #b49a5e;
+}
+
+/* DARK MODE overlay — applied on top of any palette */
+[data-theme='dark'] {
+  --sf-bg: #14110d;
+  --sf-surface: #1d1914;
+  --sf-surface-2: #28231c;
+  --sf-surface-3: #332d24;
+  --sf-ink: #f2eada;
+  --sf-ink-2: #d8cfbc;
+  --sf-muted: #9e927e;
+  --sf-muted-2: #6e6555;
+  --sf-border: #3a3329;
+  --sf-border-strong: #4e4435;
+
+  --sf-primary: #e58b6a;
+  --sf-primary-hover: #ed9c7f;
+  --sf-primary-soft: #3a2418;
+  --sf-primary-ink: #fcdcca;
+
+  --sf-accent: #ebbe5e;
+  --sf-accent-soft: #3d2f12;
+  --sf-accent-ink: #fce3a4;
+
+  --sf-ai: #f0cb7f;
+  --sf-ai-bg: linear-gradient(135deg, #2d241b 0%, #3a2d1e 100%);
+  --sf-ai-border: #66502a;
+
+  --sf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sf-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --sf-shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'][data-palette='marvarid'] {
+  --sf-primary: #6fb6ae;
+  --sf-primary-hover: #84c7bf;
+  --sf-primary-soft: #18302e;
+}
+[data-theme='dark'][data-palette='samarqand'] {
+  --sf-primary: #8a9ae0;
+  --sf-primary-hover: #9dabe6;
+  --sf-primary-soft: #1a2147;
+}
+[data-theme='dark'][data-palette='daryo'] {
+  --sf-primary: #95b27a;
+  --sf-primary-hover: #a8c290;
+  --sf-primary-soft: #1e2a14;
+}

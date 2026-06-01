@@ -1,0 +1,47 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--sf-surface-2);
+  color: var(--sf-ink-2);
+  white-space: nowrap;
+}
+
+.primary {
+  background: var(--sf-primary-soft);
+  color: var(--sf-primary-ink);
+}
+.accent {
+  background: var(--sf-accent-soft);
+  color: var(--sf-accent-ink);
+}
+.success {
+  background: var(--sf-success-soft);
+  color: var(--sf-success);
+}
+.warn {
+  background: var(--sf-warn-soft);
+  color: var(--sf-warn);
+}
+.danger {
+  background: var(--sf-danger-soft);
+  color: var(--sf-danger);
+}
+.ink {
+  background: var(--sf-ink);
+  color: var(--sf-bg);
+}
+.ai {
+  background: var(--sf-ai-bg);
+  color: var(--sf-ai);
+  border: 1px solid var(--sf-ai-border);
+}
+.neutral {
+  /* default styles above */
+}

@@ -1,0 +1,132 @@
+.fabWrap {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.fab {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--sf-ink);
+  color: var(--sf-bg);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--sf-shadow-lg);
+}
+.panel {
+  width: 260px;
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: 16px;
+  box-shadow: var(--sf-shadow-lg);
+  padding: 14px;
+  animation: rise 0.18s ease;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.panelHead {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.darkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--sf-surface-2);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sf-ink);
+}
+.darkRow > span:nth-child(2) {
+  flex: 1;
+  text-align: left;
+}
+.toggle {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--sf-border-strong);
+  position: relative;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggleOn {
+  background: var(--sf-primary);
+}
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fffcf5;
+  transition: transform 0.15s;
+}
+.toggleOn .knob {
+  transform: translateX(16px);
+}
+.swatches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.swatch {
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--sf-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  font-family: inherit;
+  text-align: left;
+}
+.swatchOn {
+  border: 1.5px solid var(--sf-primary);
+  background: var(--sf-surface-2);
+}
+.dots {
+  display: flex;
+  gap: 4px;
+}
+.dots > span {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.swatchLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sf-ink);
+}

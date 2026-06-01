@@ -1,0 +1,18 @@
+node_modules
+dist
+.git
+.vite
+*.log
+npm-debug.log*
+.DS_Store
+# legacy design prototypes / reference assets are not needed in the image
+*.html
+!index.html
+tf-*.jsx
+web-*.jsx
+design-canvas.jsx
+ios-frame.jsx
+android-frame.jsx
+android-frame.jsx
+tweaks-panel.jsx
+uploads

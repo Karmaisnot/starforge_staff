@@ -1,0 +1,99 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 16px;
+}
+.card {
+  position: relative;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  overflow: hidden;
+}
+.urgent {
+  background: linear-gradient(135deg, #fcefd0 0%, #f6e0ac 100%);
+  border: 1.5px solid var(--sf-accent);
+  box-shadow:
+    0 0 0 4px rgba(216, 154, 46, 0.16),
+    0 8px 24px rgba(216, 154, 46, 0.16);
+}
+.glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  border: 2px solid var(--sf-accent);
+  opacity: 0.4;
+  animation: sPulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sPulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+}
+.pulseDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sf-danger);
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+.meta {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(255, 252, 245, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sectionH {
+  margin: 28px 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.historyRow {
+  display: grid;
+  grid-template-columns: 40px 2fr 1.5fr 1fr 100px;
+  gap: 12px;
+  padding: 14px 18px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--sf-border);
+  cursor: pointer;
+  font-family: inherit;
+}
+.historyRow:last-child {
+  border-bottom: none;
+}
+.historyRow:hover {
+  background: var(--sf-surface-2);
+}
+.historyIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
