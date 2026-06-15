@@ -29,7 +29,7 @@ export function Sidebar({ teacher, badges = {}, aiUsage, open, onClose }) {
             <div className={styles.brandName}>
               StarForge<span style={{ color: 'var(--sf-muted)', fontWeight: 500 }}> · EDU</span>
             </div>
-            <div className={styles.brandSub}>{teacher?.branch ?? 'Demo Akademiya'}</div>
+            <div className={styles.brandSub}>{teacher?.branch ?? t('cohorts.branch')}</div>
           </div>
           <button
             className={styles.sideClose}
@@ -37,7 +37,7 @@ export function Sidebar({ teacher, badges = {}, aiUsage, open, onClose }) {
               e.stopPropagation();
               onClose();
             }}
-            aria-label="Yopish"
+            aria-label={t('common.close')}
           >
             <Icon name="x" size={18} />
           </button>

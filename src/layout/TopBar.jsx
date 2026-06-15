@@ -11,7 +11,7 @@ export function TopBar({ title, teacher, onOpenDrawer }) {
   const { t } = useT();
   return (
     <header className={styles.top}>
-      <button className={styles.hamburger} onClick={onOpenDrawer} aria-label="Menyu">
+      <button className={styles.hamburger} onClick={onOpenDrawer} aria-label={t('shell.menu')}>
         <Icon name="filter" size={20} />
       </button>
       <div className={styles.crumb}>
@@ -25,18 +25,18 @@ export function TopBar({ title, teacher, onOpenDrawer }) {
         <span className={styles.searchKbd}>⌘K</span>
       </div>
       <div className={styles.topActions}>
-        <button className={styles.topBtn} title="AI suhbat" onClick={() => navigate('/ai')}>
+        <button className={styles.topBtn} title={t('nav.ai')} onClick={() => navigate('/ai')}>
           <Icon name="ai" size={18} />
         </button>
         <button
           className={styles.topBtn}
-          title="Bildirishnomalar"
+          title={t('nav.notifications')}
           onClick={() => navigate('/notifications')}
         >
           <Icon name="bell" size={18} />
           <span className={styles.topDot} />
         </button>
-        <button className={styles.topAvatar} onClick={() => navigate('/settings')} aria-label="Profil">
+        <button className={styles.topAvatar} onClick={() => navigate('/settings')} aria-label={t('settings.profile')}>
           <Avatar name={teacher?.name ?? 'A'} size={32} color="var(--sf-primary)" />
         </button>
       </div>

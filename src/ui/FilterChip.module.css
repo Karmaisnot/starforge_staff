@@ -14,7 +14,10 @@
   font-family: inherit;
   transition: all 0.15s;
 }
-.chip:hover {
+/* Hover affordance only for INACTIVE chips — the active chip already has an
+   ink background with light text; recolouring its text to ink on hover would
+   paint it the same colour as its own background and make the label vanish. */
+.chip:not(.on):hover {
   color: var(--sf-ink);
   border-color: var(--sf-border-strong);
 }
@@ -22,6 +25,9 @@
   background: var(--sf-ink);
   color: var(--sf-bg);
   border-color: transparent;
+}
+.on:hover {
+  background: var(--sf-ink-2);
 }
 .count {
   font-family: var(--sf-font-mono);

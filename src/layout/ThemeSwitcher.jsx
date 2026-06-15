@@ -54,11 +54,12 @@ export function ThemeControls() {
 /** Floating tweaks button + popover. */
 export function ThemeSwitcher() {
   const [open, setOpen] = useState(false);
+  const { t } = useT();
   return (
     <div className={styles.fabWrap}>
       {open && (
         <div className={styles.panel}>
-          <div className={styles.panelHead}>StarForge tweaks</div>
+          <div className={styles.panelHead}>StarForge · {t('shell.appearance')}</div>
           <ThemeControls />
         </div>
       )}
@@ -66,7 +67,7 @@ export function ThemeSwitcher() {
         type="button"
         className={styles.fab}
         onClick={() => setOpen((o) => !o)}
-        aria-label="Mavzu sozlamalari"
+        aria-label={t('shell.appearance')}
       >
         <Icon name={open ? 'x' : 'settings'} size={20} />
       </button>

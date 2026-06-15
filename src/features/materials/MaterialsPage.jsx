@@ -112,7 +112,7 @@ export function MaterialsPage() {
                 <button className={styles.iconBtn} onClick={() => download(f)} aria-label={t('materials.download')}>
                   <Icon name="download" size={16} />
                 </button>
-                <button className={styles.iconBtn} onClick={() => navigate('/print')} aria-label="Print">
+                <button className={styles.iconBtn} onClick={() => navigate('/print')} aria-label={t('print.title')}>
                   <Icon name="print" size={16} />
                 </button>
                 <button className={styles.iconBtn} onClick={() => removeFile(f)} aria-label={t('materials.removed')}>

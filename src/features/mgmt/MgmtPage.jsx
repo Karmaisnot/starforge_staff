@@ -112,7 +112,7 @@ function ChatPanel({ thread }) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
         />
-        <button type="submit" className={styles.send} aria-label="Yuborish">
+        <button type="submit" className={styles.send} aria-label={tt('mgmt.send')}>
           <Icon name="send" size={16} />
         </button>
       </form>

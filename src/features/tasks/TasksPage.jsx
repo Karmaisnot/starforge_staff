@@ -80,7 +80,7 @@ function KanbanBoard({ columns, tasks, onToggle, onAdd }) {
               <span className={styles.kanbanName}>{col.label}</span>
               <span className={styles.kanbanCount}>{colTasks.length}</span>
               <span style={{ flex: 1 }} />
-              <button className={styles.iconBtn} aria-label="Qo‘shish" onClick={() => onAdd?.(col.id)}>
+              <button className={styles.iconBtn} aria-label={t('common.add')} onClick={() => onAdd?.(col.id)}>
                 <Icon name="plus" size={14} />
               </button>
             </div>
@@ -117,7 +117,7 @@ function TaskListView({ columns, tasks, onToggle }) {
               <button
                 className={styles.check}
                 onClick={() => onToggle(task)}
-                aria-label="Holatni almashtirish"
+                aria-label={t('tasks.toggleState')}
                 style={{
                   background: task.state === 'done' ? 'var(--sf-success)' : 'transparent',
                   borderColor: task.state === 'done' ? 'var(--sf-success)' : 'var(--sf-border-strong)',
@@ -225,11 +225,11 @@ function CalendarView({ tasks, onToggle }) {
   return (
     <Card padded={false}>
       <div className={styles.calHead}>
-        <button className={styles.iconBtn} onClick={() => step(-1)} aria-label="Prev">
+        <button className={styles.iconBtn} onClick={() => step(-1)} aria-label={t('tasks.prevMonth')}>
           <Icon name="chevR" size={16} style={{ transform: 'rotate(180deg)' }} />
         </button>
         <span className={styles.calMonth}>{monthLabel}</span>
-        <button className={styles.iconBtn} onClick={() => step(1)} aria-label="Next">
+        <button className={styles.iconBtn} onClick={() => step(1)} aria-label={t('tasks.nextMonth')}>
           <Icon name="chevR" size={16} />
         </button>
       </div>

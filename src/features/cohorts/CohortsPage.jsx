@@ -7,6 +7,7 @@ import { attendanceTone } from '@/domain/models/cohort.js';
 import { useCohorts, useRoster } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { plural } from '@/i18n/plural.js';
 import styles from './cohorts.module.css';
 
 function NewGroupModal({ open, onClose, onCreate }) {
@@ -226,7 +227,7 @@ export function CohortsPage() {
   const state = useCohorts();
   const toast = useToast();
   const navigate = useNavigate();
-  const { t } = useT();
+  const { t, locale } = useT();
   const [added, setAdded] = useState([]);
   const [levelFilter, setLevelFilter] = useState(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -329,7 +330,7 @@ export function CohortsPage() {
                       <span style={{ opacity: 0.7 }}>{cur.name.split(' ').slice(1).join(' ')}</span>
                     </div>
                     <div className={styles.heroSub}>
-                      {cur.studentCount} {t('common.students')} · {t('cohorts.branch')} · {cur.room}
+                      {cur.studentCount} {plural(locale, 'students', cur.studentCount)} · {t('cohorts.branch')} · {cur.room}
                     </div>
                     <div className={styles.heroStats}>
                       {[
@@ -351,8 +352,8 @@ export function CohortsPage() {
                       <Button variant="cream-ghost" onClick={() => navigate('/cards')}>
                         {t('cohorts.giveCard')}
                       </Button>
-                      <Button variant="cream-ghost" onClick={() => toast(`${cur.studentCount} ${t('common.students')}`)}>
-                        {cur.studentCount} {t('common.students')}
+                      <Button variant="cream-ghost" onClick={() => toast(`${cur.studentCount} ${plural(locale, 'students', cur.studentCount)}`)}>
+                        {cur.studentCount} {plural(locale, 'students', cur.studentCount)}
                       </Button>
                     </div>
                   </div>

@@ -1,3 +1,4 @@
+import { useT } from '@/hooks/useT.js';
 import styles from './Stepper.module.css';
 
 /**
@@ -5,14 +6,15 @@ import styles from './Stepper.module.css';
  * @param {{ value: number, onChange?: (n:number)=>void, min?: number, max?: number }} props
  */
 export function Stepper({ value, onChange, min = 0, max = Infinity }) {
+  const { t } = useT();
   const set = (next) => onChange?.(Math.min(max, Math.max(min, next)));
   return (
     <div className={styles.stepper}>
-      <button type="button" onClick={() => set(value - 1)} aria-label="Kamaytirish">
+      <button type="button" onClick={() => set(value - 1)} aria-label={t('common.decrease')}>
         −
       </button>
       <span className="sf-mono">{value}</span>
-      <button type="button" className={styles.plus} onClick={() => set(value + 1)} aria-label="Oshirish">
+      <button type="button" className={styles.plus} onClick={() => set(value + 1)} aria-label={t('common.increase')}>
         +
       </button>
     </div>

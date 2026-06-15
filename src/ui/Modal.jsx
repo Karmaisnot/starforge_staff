@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Icon } from './icons/Icon.jsx';
+import { useT } from '@/hooks/useT.js';
 import styles from './Modal.module.css';
 
 /**
@@ -7,6 +8,7 @@ import styles from './Modal.module.css';
  * @param {{ open: boolean, title?: string, onClose: Function, children?: any, footer?: any }} props
  */
 export function Modal({ open, title, onClose, children, footer }) {
+  const { t } = useT();
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -20,7 +22,7 @@ export function Modal({ open, title, onClose, children, footer }) {
       <div className={styles.dialog} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className={styles.head}>
           <h2 className={styles.title}>{title}</h2>
-          <button className={styles.close} onClick={onClose} aria-label="Yopish">
+          <button className={styles.close} onClick={onClose} aria-label={t('common.close')}>
             <Icon name="x" size={18} />
           </button>
         </div>

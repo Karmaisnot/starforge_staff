@@ -133,7 +133,7 @@ export function AiPage() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 14, fontWeight: 700 }}>
-                          {activeConv?.name ?? '9-B Algebra'}
+                          {activeConv?.name ?? tt('nav.ai')}
                         </span>
                         <AiBadge compact>{tt('ai.group')}</AiBadge>
                       </div>
@@ -262,7 +262,7 @@ export function AiPage() {
                   <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
                     {tt('ai.tokenEst')}
                   </span>
-                  <button type="submit" className={styles.send} aria-label="Yuborish">
+                  <button type="submit" className={styles.send} aria-label={tt('common.send')}>
                     <Icon name="send" size={16} />
                   </button>
                 </form>
