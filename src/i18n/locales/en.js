@@ -125,6 +125,7 @@ export default {
     toggleState: 'Toggle status',
     prevMonth: 'Previous month',
     nextMonth: 'Next month',
+    weekdays: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
   },
   ai: {
     titleA: 'AI',
@@ -199,7 +200,7 @@ export default {
     title: 'Management',
     subtitle: 'Directly with the director, methodist and branch manager',
     online: 'online',
-    writeTo: ' — message...',
+    writeTo: '{name} — message...',
     toTask: 'To task',
     empty: 'No messages yet. Be the first to write.',
     sent: 'Message sent',

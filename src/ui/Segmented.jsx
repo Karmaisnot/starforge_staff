@@ -12,6 +12,7 @@ export function Segmented({ options, value, onChange }) {
           key={opt.value}
           type="button"
           className={value === opt.value ? styles.on : undefined}
+          aria-pressed={value === opt.value}
           onClick={() => onChange?.(opt.value)}
         >
           {opt.label}

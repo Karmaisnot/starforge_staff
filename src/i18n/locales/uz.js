@@ -125,6 +125,7 @@ export default {
     toggleState: 'Holatni almashtirish',
     prevMonth: 'Oldingi oy',
     nextMonth: 'Keyingi oy',
+    weekdays: ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'],
   },
   ai: {
     titleA: 'AI',
@@ -199,7 +200,7 @@ export default {
     title: 'Boshqaruv',
     subtitle: "Direktor, metodist va filial menejeri bilan to'g'ridan-to'g'ri",
     online: 'onlayn',
-    writeTo: 'ga yozish...',
+    writeTo: '{name}ga yozish...',
     toTask: 'Vazifaga',
     empty: "Hali xabarlar yo'q. Birinchi bo'lib yozing.",
     sent: 'Xabar yuborildi',

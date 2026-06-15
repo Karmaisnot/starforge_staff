@@ -19,7 +19,10 @@ export function useAsync(loader, deps = []) {
         if (active) setState({ data, loading: false, error: null });
       })
       .catch((error) => {
-        if (active) setState({ data: null, loading: false, error });
+        // Keep the last good data on a refetch failure (e.g. a transient error
+        // during a locale switch) so the page shows stale content instead of
+        // blanking. AsyncBoundary surfaces the error only when there is no data.
+        if (active) setState((s) => ({ data: s.data, loading: false, error }));
       });
     return () => {
       active = false;

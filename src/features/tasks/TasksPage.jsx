@@ -21,7 +21,18 @@ const PREDICATES = {
 function TaskCard({ task, onToggle }) {
   const { t } = useT();
   return (
-    <div className={styles.taskCard} onClick={() => onToggle(task)}>
+    <div
+      className={styles.taskCard}
+      role="button"
+      tabIndex={0}
+      onClick={() => onToggle(task)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onToggle(task);
+        }
+      }}
+    >
       <div
         className={styles.taskRailV}
         style={{ background: task.urgent ? 'var(--sf-danger)' : task.projectColor }}
@@ -177,10 +188,9 @@ function parseDeadline(deadline) {
   return { day: Number(m[1]), month: Number(m[2]) };
 }
 
-const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-
 function CalendarView({ tasks, onToggle }) {
-  const { t } = useT();
+  const { t, locale } = useT();
+  const weekdays = t('tasks.weekdays');
   // Anchor the calendar on the month that actually holds the most dated tasks,
   // so the view is useful on first render instead of landing on an empty month.
   const dated = tasks.map((task) => ({ task, d: parseDeadline(task.deadline) })).filter((x) => x.d);
@@ -201,14 +211,19 @@ function CalendarView({ tasks, onToggle }) {
   const first = new Date(year, month - 1, 1);
   const startPad = (first.getDay() + 6) % 7; // Monday-first offset
   const daysInMonth = new Date(year, month, 0).getDate();
-  const monthLabel = first.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+  const monthLabel = first.toLocaleString(locale, { month: 'long', year: 'numeric' });
 
   const byDay = {};
   const unscheduled = [];
   for (const task of tasks) {
     const d = parseDeadline(task.deadline);
-    if (d && d.month === month) (byDay[d.day] ??= []).push(task);
-    else if (!d) unscheduled.push(task);
+    // Guard the parsed day against the month length so a task with an
+    // impossible day (e.g. "31.02") lands in Unscheduled instead of vanishing.
+    if (d && d.month === month && d.day >= 1 && d.day <= daysInMonth) {
+      (byDay[d.day] ??= []).push(task);
+    } else if (!d || d.month === month) {
+      unscheduled.push(task);
+    }
   }
 
   const cells = [];
@@ -234,7 +249,7 @@ function CalendarView({ tasks, onToggle }) {
         </button>
       </div>
       <div className={styles.calWeekdays}>
-        {WEEKDAYS.map((w) => (
+        {weekdays.map((w) => (
           <div key={w}>{w}</div>
         ))}
       </div>
@@ -389,7 +404,7 @@ function NewTaskModal({ open, onClose, columns, projects, onCreate, presetState 
 export function TasksPage() {
   const { tasks: taskService } = useServices();
   const toast = useToast();
-  const { t } = useT();
+  const { t, locale } = useT();
   const viewOptions = [
     { value: 'list', label: t('tasks.viewList'), icon: 'filter' },
     { value: 'board', label: t('tasks.viewBoard'), icon: 'cohort' },
@@ -403,8 +418,8 @@ export function TasksPage() {
   const [added, setAdded] = useState([]);
   const [modal, setModal] = useState(null); // null | { presetState }
 
-  const listState = useAsync(() => taskService.getList(), []);
-  const filtersState = useAsync(() => taskService.getFilters(), []);
+  const listState = useAsync(() => taskService.getList(), [locale]);
+  const filtersState = useAsync(() => taskService.getFilters(), [locale]);
 
   const baseTasks = useMemo(
     () => [...added, ...(listState.data?.tasks ?? [])],

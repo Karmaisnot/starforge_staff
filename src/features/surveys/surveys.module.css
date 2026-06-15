@@ -105,3 +105,13 @@
 .modalField > span { font-size: 13px; font-weight: 600; }
 .modalTextarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--sf-border); background: var(--sf-bg); font-family: inherit; font-size: 14px; color: var(--sf-ink); outline: none; resize: vertical; }
 .modalTextarea:focus { border-color: var(--sf-primary); }
+
+/* The urgent card and its meta block use fixed light backgrounds; in dark mode
+   the inherited --sf-ink / --sf-ink-2 text flips near-white and would vanish.
+   Darken the backgrounds so the (correctly token-driven) text stays legible. */
+[data-theme='dark'] .urgent {
+  background: linear-gradient(135deg, #2d241b 0%, #3a2d1e 100%);
+}
+[data-theme='dark'] .meta {
+  background: rgba(0, 0, 0, 0.22);
+}

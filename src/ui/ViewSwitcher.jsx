@@ -13,6 +13,7 @@ export function ViewSwitcher({ options, value, onChange }) {
           key={opt.value}
           type="button"
           data-on={value === opt.value ? '1' : '0'}
+          aria-pressed={value === opt.value}
           onClick={() => onChange?.(opt.value)}
         >
           {opt.icon && <Icon name={opt.icon} size={13} />}

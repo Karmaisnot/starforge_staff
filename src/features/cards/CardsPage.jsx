@@ -17,6 +17,16 @@ function GiveCardModal({ open, onClose, types }) {
 
   const kindTypes = types?.[kind] ?? [];
 
+  // Reset every field so reopening the modal always starts clean — covers
+  // submit, Cancel, backdrop click, Escape and the X button.
+  const close = () => {
+    setKind('up');
+    setType('');
+    setRecipient('');
+    setReason('');
+    onClose();
+  };
+
   const submit = (e) => {
     e.preventDefault();
     if (!recipient.trim()) {
@@ -24,19 +34,17 @@ function GiveCardModal({ open, onClose, types }) {
       return;
     }
     toast(`${recipient} · ${type || kindTypes[0]?.name}`, 'success');
-    onClose();
-    setRecipient('');
-    setReason('');
+    close();
   };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={tr('cards.modalTitle')}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={close}>
             {tr('common.cancel')}
           </Button>
           <Button variant="primary" icon="brand" onClick={submit}>

@@ -6,6 +6,7 @@ import { Button, Card, Chip, Icon, Stat } from '@/ui';
 import { useMaterialsPage } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { plural } from '@/i18n/plural.js';
 import styles from './materials.module.css';
 
 const KIND_ICON = { pdf: 'pdf', video: 'video', doc: 'doc' };
@@ -21,7 +22,7 @@ function humanSize(bytes) {
 export function MaterialsPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { t } = useT();
+  const { t, locale } = useT();
   const state = useMaterialsPage();
   const fileRef = useRef(null);
   const [uploaded, setUploaded] = useState([]);
@@ -50,7 +51,7 @@ export function MaterialsPage() {
       };
     });
     setUploaded((list) => [...items, ...list]);
-    toast(`+ ${files.length} ${t('materials.files')}`, 'success');
+    toast(`+ ${files.length} ${plural(locale, 'files', files.length)}`, 'success');
     e.target.value = '';
   };
 
@@ -71,7 +72,7 @@ export function MaterialsPage() {
         <>
           <PageHeader
             title={t('materials.title')}
-            subtitle={`${d.storage.fileCount} ${t('materials.files')} · ${d.storage.used} / ${d.storage.total}`}
+            subtitle={`${d.storage.fileCount} ${plural(locale, 'files', d.storage.fileCount)} · ${d.storage.used} / ${d.storage.total}`}
             right={
               <>
                 <input
@@ -106,7 +107,7 @@ export function MaterialsPage() {
                     {f.aiSummary && <Chip tone="ai">{t('materials.aiSummary')}</Chip>}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--sf-muted)', marginTop: 2 }}>
-                    <span className="sf-mono">{f.meta}</span> · {f.views} {t('materials.viewed')} · {f.date}
+                    <span className="sf-mono">{f.meta}</span> · {f.views} {plural(locale, 'views', f.views)} · {f.date}
                   </div>
                 </div>
                 <button className={styles.iconBtn} onClick={() => download(f)} aria-label={t('materials.download')}>

@@ -48,13 +48,16 @@ export function NotificationsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {g.items
                     .filter((it) => filter === 'all' || matchesFilter(it, filter))
-                    .map((it, i) => {
+                    .map((it) => {
                       const c = notificationToneStyle(it.tone);
-                      const key = `${g.label}-${i}`;
+                      // Stable key from resolved content, not the post-filter
+                      // index — otherwise read-state mislabels rows when the
+                      // active filter changes the list order/length.
+                      const key = `${g.label}-${it.title}-${it.time}`;
                       const isRead = read[key];
                       return (
                         <button
-                          key={i}
+                          key={key}
                           className={styles.row}
                           style={{ opacity: isRead ? 0.5 : 1 }}
                           onClick={() => markRead(key, it.title)}

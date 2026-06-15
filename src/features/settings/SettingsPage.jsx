@@ -37,9 +37,11 @@ export function SettingsPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggedOut, setLoggedOut] = useState(false);
+  // Store stable ids + label keys (not resolved strings) so the device labels
+  // re-localize when the language changes instead of freezing at first mount.
   const [devices, setDevices] = useState([
-    { id: 'web', label: t('settings.deviceWeb') },
-    { id: 'mobile', label: t('settings.deviceMobile') },
+    { id: 'web', labelKey: 'settings.deviceWeb' },
+    { id: 'mobile', labelKey: 'settings.deviceMobile' },
   ]);
   const [draft, setDraft] = useState({ name: '', username: '' });
   useEffect(() => {
@@ -178,6 +180,7 @@ export function SettingsPage() {
               <Icon name="globe" size={18} />
               <select
                 className={styles.select}
+                aria-label={t('settings.language')}
                 value={locale}
                 onChange={(e) => {
                   setLocale(e.target.value);
@@ -209,7 +212,7 @@ export function SettingsPage() {
           <Card title={t('settings.devices')} padded={false}>
             {devices.map((dvc) => (
               <div key={dvc.id} className={styles.row}>
-                <span>{dvc.label}</span>
+                <span>{t(dvc.labelKey)}</span>
                 <Button variant="ghost" onClick={() => ejectDevice(dvc.id)}>
                   {t('settings.eject')}
                 </Button>

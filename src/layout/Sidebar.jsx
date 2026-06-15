@@ -15,7 +15,12 @@ export function Sidebar({ teacher, badges = {}, aiUsage, open, onClose }) {
   const pct = aiUsage?.percent ?? 0;
 
   return (
-    <aside className={`${styles.side} ${open ? styles.open : ''}`}>
+    <aside
+      className={`${styles.side} ${open ? styles.open : ''}`}
+      role={open ? 'dialog' : undefined}
+      aria-modal={open ? true : undefined}
+      aria-label={open ? t('shell.menu') : undefined}
+    >
       <div className={styles.sideInner}>
         <div
           className={styles.brand}

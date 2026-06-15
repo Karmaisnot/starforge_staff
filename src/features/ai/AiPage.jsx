@@ -44,9 +44,12 @@ export function AiPage() {
           const text = [
             String(activeConv?.name ?? ''),
             '',
-            t.outgoing1,
-            `${t.reply.leadItalic}${t.reply.leadRest}`,
-            t.outgoing2,
+            // Only the workspace conversation actually renders the transcript;
+            // for other conversations export just their own sent messages so the
+            // download matches what's on screen instead of conversation #1's data.
+            ...(isWorkspaceConv
+              ? [t.outgoing1, `${t.reply.leadItalic}${t.reply.leadRest}`, t.outgoing2]
+              : []),
             ...sent,
           ].join('\n');
           const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
@@ -86,6 +89,7 @@ export function AiPage() {
                   <Icon name="search" size={14} style={{ color: 'var(--sf-muted)' }} />
                   <input
                     className={styles.searchInput}
+                    aria-label={tt('ai.searchConv')}
                     placeholder={tt('ai.searchConv')}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
@@ -255,6 +259,7 @@ export function AiPage() {
                 >
                   <input
                     className={styles.inputField}
+                    aria-label={tt('ai.placeholder')}
                     placeholder={tt('ai.placeholder')}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}

@@ -9,7 +9,7 @@ import styles from './FilterChip.module.css';
  */
 export function FilterChip({ label, count, active = false, icon, onClick }) {
   return (
-    <button type="button" className={cx(styles.chip, active && styles.on)} onClick={onClick}>
+    <button type="button" className={cx(styles.chip, active && styles.on)} aria-pressed={active} onClick={onClick}>
       {icon && <Icon name={icon} size={12} />}
       {label}
       {count != null && <span className={styles.count}>{count}</span>}

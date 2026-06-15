@@ -5,10 +5,11 @@ import { Button, Card, Chip, Icon, Modal, ProgressBar, Segmented } from '@/ui';
 import { useSurveysPage } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { plural } from '@/i18n/plural.js';
 import styles from './surveys.module.css';
 
 function SurveyModal({ survey, onClose, onSubmit }) {
-  const { t } = useT();
+  const { t, locale } = useT();
   const [rating, setRating] = useState('4');
   const [comment, setComment] = useState('');
   if (!survey) return null;
@@ -29,7 +30,7 @@ function SurveyModal({ survey, onClose, onSubmit }) {
       }
     >
       <div className={styles.modalMeta}>
-        {survey.issuer} · {survey.questions} {t('surveys.question')} · {survey.estimate}
+        {survey.issuer} · {survey.questions} {plural(locale, 'questions', survey.questions)} · {survey.estimate}
       </div>
       <div className={styles.modalField}>
         <span>{t('surveys.rateQ')}</span>
@@ -54,7 +55,7 @@ function SurveyModal({ survey, onClose, onSubmit }) {
 
 export function SurveysPage() {
   const toast = useToast();
-  const { t } = useT();
+  const { t, locale } = useT();
   const state = useSurveysPage();
   const [open, setOpen] = useState(null);
   const [done, setDone] = useState([]); // completed survey ids
@@ -109,7 +110,7 @@ export function SurveysPage() {
                   <div className={styles.meta}>
                     <div style={{ flex: 1 }}>
                       <div className="sf-mono" style={{ fontSize: 12, color: 'var(--sf-ink-2)' }}>
-                        <strong>{s.questions}</strong> {t('surveys.question')} · {s.estimate}
+                        <strong>{s.questions}</strong> {plural(locale, 'questions', s.questions)} · {s.estimate}
                       </div>
                       {s.progress > 0 && (
                         <div style={{ marginTop: 6 }}>

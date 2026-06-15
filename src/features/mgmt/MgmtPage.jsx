@@ -108,7 +108,8 @@ function ChatPanel({ thread }) {
         </button>
         <input
           className={styles.inputField}
-          placeholder={`${thread.name} ${tt('mgmt.writeTo')}`}
+          aria-label={tt('mgmt.writeTo').replace('{name}', thread.name)}
+          placeholder={tt('mgmt.writeTo').replace('{name}', thread.name)}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
         />
@@ -241,7 +242,7 @@ export function MgmtPage() {
                 ))}
               </Card>
 
-              <ChatPanel thread={cur} />
+              <ChatPanel key={cur.id} thread={cur} />
             </div>
 
             <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} onCreate={createThread} />

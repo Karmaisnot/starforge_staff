@@ -137,9 +137,9 @@ export function TodayPage() {
                 title={t('today.scheduleTitle')}
                 padded={false}
                 action={
-                  <a className={styles.link} onClick={() => navigate('/cohorts')}>
+                  <button type="button" className={styles.link} onClick={() => navigate('/cohorts')}>
                     {t('today.lessonsLink')}
-                  </a>
+                  </button>
                 }
               >
                 {d.schedule.map((row, i) => (
@@ -164,9 +164,9 @@ export function TodayPage() {
                 style={{ display: show('recentCards') ? undefined : 'none' }}
                 title={t('today.recentCards')}
                 action={
-                  <a className={styles.link} onClick={() => navigate('/cards')}>
+                  <button type="button" className={styles.link} onClick={() => navigate('/cards')}>
                     {t('today.tenLink')}
-                  </a>
+                  </button>
                 }
               >
                 <div className={styles.cardsStrip}>
@@ -190,9 +190,9 @@ export function TodayPage() {
                 title={t('today.pendingTitle')}
                 padded={false}
                 action={
-                  <a className={styles.link} onClick={() => navigate('/tasks')}>
+                  <button type="button" className={styles.link} onClick={() => navigate('/tasks')}>
                     {t('today.allLink')}
-                  </a>
+                  </button>
                 }
               >
                 {d.pendingTasks.map((task, i) => (
@@ -271,9 +271,9 @@ export function TodayPage() {
                 title={t('today.printQueue')}
                 padded={false}
                 action={
-                  <a className={styles.link} onClick={() => navigate('/print')}>
+                  <button type="button" className={styles.link} onClick={() => navigate('/print')}>
                     {t('today.twoLink')}
-                  </a>
+                  </button>
                 }
               >
                 {d.printQueue.map((j, i) => (
@@ -300,7 +300,18 @@ export function TodayPage() {
 
               {/* Mgmt mention */}
               <Card padded={false}>
-                <div className={styles.mgmtRow} onClick={() => navigate('/mgmt')}>
+                <div
+                  className={styles.mgmtRow}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/mgmt')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate('/mgmt');
+                    }
+                  }}
+                >
                   <Avatar name={d.mgmtMention.name} size={40} color="var(--sf-primary)" />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -321,9 +332,9 @@ export function TodayPage() {
                 style={{ display: show('spotlight') ? undefined : 'none' }}
                 title={t('today.spotlight')}
                 action={
-                  <a className={styles.link} onClick={() => navigate('/cohorts')}>
+                  <button type="button" className={styles.link} onClick={() => navigate('/cohorts')}>
                     {t('today.change')}
-                  </a>
+                  </button>
                 }
               >
                 <div className={styles.spotlightHead}>
@@ -391,6 +402,7 @@ export function TodayPage() {
                   key={key}
                   type="button"
                   className={styles.widgetRow}
+                  aria-pressed={show(key)}
                   onClick={() => toggleWidget(key)}
                 >
                   <span>{t(`today.w_${key}`)}</span>

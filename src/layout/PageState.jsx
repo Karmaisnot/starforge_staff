@@ -28,6 +28,9 @@ export function PageError({ error }) {
  * @param {{ state: {data:any,loading:boolean,error:Error|null}, children: (data:any)=>any }} props
  */
 export function AsyncBoundary({ state, children }) {
+  // Prefer showing data (possibly stale during a refetch or after a transient
+  // refetch error) over flashing a spinner or blanking to an error panel.
+  if (state.data != null) return children(state.data);
   if (state.loading) return <PageLoading />;
   if (state.error) return <PageError error={state.error} />;
   return children(state.data);

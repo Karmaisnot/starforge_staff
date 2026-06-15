@@ -3,6 +3,10 @@
   color: var(--sf-primary);
   font-weight: 600;
   cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
 }
 .link:hover {
   text-decoration: underline;
@@ -14,6 +18,10 @@
   padding: 16px 20px;
   border-radius: 16px;
   background: linear-gradient(135deg, #fcefd0 0%, #f6e0ac 100%);
+  /* Background is a fixed light gradient, so pin a fixed dark text colour here
+     instead of inheriting --sf-ink (which flips near-white in dark mode and
+     would make the title vanish on this light banner). */
+  color: #4a2f0a;
   border: 1.5px solid var(--sf-accent);
   box-shadow:
     0 0 0 5px rgba(216, 154, 46, 0.16),

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
@@ -63,6 +63,11 @@ function AttendanceModal({ open, onClose, cohort }) {
   const toast = useToast();
   const { data: roster } = useRoster(open ? cohort?.id : undefined);
   const [present, setPresent] = useState({});
+  // Reset selections each time the modal opens or the cohort changes, so one
+  // cohort's attendance never bleeds into another's.
+  useEffect(() => {
+    if (open) setPresent({});
+  }, [open, cohort?.id]);
   const list = roster ?? [];
   const presentCount = list.filter((s) => present[s.id] !== false).length;
   const save = () => {
@@ -169,9 +174,9 @@ function Roster({ cohortId }) {
       title={t('cohorts.rosterTitle')}
       padded={false}
       action={
-        <a className={styles.link} onClick={cycleSort}>
+        <button type="button" className={styles.link} onClick={cycleSort}>
           {sortLabel}
-        </a>
+        </button>
       }
     >
       {visible.map((s) => (
@@ -223,7 +228,7 @@ function Roster({ cohortId }) {
 }
 
 export function CohortsPage() {
-  const [selected, setSelected] = useState(0);
+  const [selectedId, setSelectedId] = useState(null);
   const state = useCohorts();
   const toast = useToast();
   const navigate = useNavigate();
@@ -234,11 +239,13 @@ export function CohortsPage() {
   const [attendanceOpen, setAttendanceOpen] = useState(false);
 
   const createGroup = (draft) => {
+    const id = `g-${Date.now()}`;
     setAdded((list) => [
-      { id: `g-${Date.now()}`, color: 'var(--sf-primary)', studentCount: 0, attendance: 100, up: 0, down: 0, next: '—', ...draft },
+      { id, color: 'var(--sf-primary)', studentCount: 0, attendance: 100, up: 0, down: 0, next: '—', ...draft },
       ...list,
     ]);
-    setSelected(0);
+    setLevelFilter(null);
+    setSelectedId(id);
     toast(`+ ${draft.name}`, 'success');
   };
 
@@ -248,11 +255,11 @@ export function CohortsPage() {
         const allCohorts = [...added, ...loaded];
         const levels = [...new Set(allCohorts.map((c) => c.level))];
         const cohorts = levelFilter ? allCohorts.filter((c) => c.level === levelFilter) : allCohorts;
-        const cur = cohorts[selected] ?? cohorts[0];
+        const cur = cohorts.find((c) => c.id === selectedId) ?? cohorts[0];
         const cycleLevel = () => {
           const order = [null, ...levels];
           setLevelFilter((l) => order[(order.indexOf(l) + 1) % order.length]);
-          setSelected(0);
+          setSelectedId(null);
         };
         return (
           <>
@@ -281,11 +288,19 @@ export function CohortsPage() {
                   <div style={{ textAlign: 'right' }}>{t('cohorts.tCards')}</div>
                   <div>{t('cohorts.tNext')}</div>
                 </div>
-                {cohorts.map((c, i) => (
+                {cohorts.map((c) => (
                   <div
                     key={c.id}
-                    className={`${styles.tableRow} ${selected === i ? styles.on : ''}`}
-                    onClick={() => setSelected(i)}
+                    className={`${styles.tableRow} ${selectedId === c.id ? styles.on : ''}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedId(c.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedId(c.id);
+                      }
+                    }}
                   >
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       <div className={styles.cohortMark} style={{ background: c.color }}>
@@ -359,7 +374,7 @@ export function CohortsPage() {
                   </div>
                 </div>
 
-                <Roster cohortId={cur.id} />
+                <Roster key={cur.id} cohortId={cur.id} />
 
                 <div className={styles.aiCard}>
                   <div className={styles.aiBg} />

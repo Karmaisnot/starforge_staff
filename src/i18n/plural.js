@@ -11,6 +11,26 @@ const NOUN_FORMS = {
     ru: { one: 'ученик', few: 'ученика', many: 'учеников', other: 'ученика' },
     en: { one: 'student', other: 'students' },
   },
+  pages: {
+    uz: { other: 'sahifa' },
+    ru: { one: 'страница', few: 'страницы', many: 'страниц', other: 'страницы' },
+    en: { one: 'page', other: 'pages' },
+  },
+  files: {
+    uz: { other: 'fayl' },
+    ru: { one: 'файл', few: 'файла', many: 'файлов', other: 'файла' },
+    en: { one: 'file', other: 'files' },
+  },
+  questions: {
+    uz: { other: 'savol' },
+    ru: { one: 'вопрос', few: 'вопроса', many: 'вопросов', other: 'вопроса' },
+    en: { one: 'question', other: 'questions' },
+  },
+  views: {
+    uz: { other: "ko'rildi" },
+    ru: { one: 'просмотр', few: 'просмотра', many: 'просмотров', other: 'просмотра' },
+    en: { one: 'view', other: 'views' },
+  },
 };
 
 const rulesCache = {};

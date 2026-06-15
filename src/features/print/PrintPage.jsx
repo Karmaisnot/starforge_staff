@@ -6,13 +6,14 @@ import { printerStatusTone } from '@/domain/models/print.js';
 import { usePrintPage } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { plural } from '@/i18n/plural.js';
 import styles from './print.module.css';
 
 const PAGES_PER_COPY = 8;
 
 function QuickPrint({ library, onAdd }) {
   const toast = useToast();
-  const { t: tt } = useT();
+  const { t: tt, locale } = useT();
   const [source, setSource] = useState('library');
   const [copies, setCopies] = useState(24);
   const [format, setFormat] = useState('A4');
@@ -29,7 +30,7 @@ function QuickPrint({ library, onAdd }) {
       printer: 'HP LaserJet',
       icon: 'doc',
     });
-    toast(`${total} ${tt('print.pages')} ${tt('print.queueToast')}`, 'success');
+    toast(`${total} ${plural(locale, 'pages', total)} ${tt('print.queueToast')}`, 'success');
   };
 
   return (
@@ -112,7 +113,7 @@ function QuickPrint({ library, onAdd }) {
             <StarMark size={20} color="var(--sf-accent)" />
           </div>
           <div className="sf-mono" style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>
-            {copies} × {PAGES_PER_COPY} = {total} {tt('print.pages')}
+            {copies} × {PAGES_PER_COPY} = {total} {plural(locale, 'pages', total)}
           </div>
           <div style={{ marginTop: 2, fontSize: 11, opacity: 0.7 }}>
             {format} · {color === 'bw' ? tt('print.bw') : tt('print.colorful')} · {side} {tt('print.sided')} · HP LaserJet
@@ -195,7 +196,7 @@ export function PrintPage() {
                             color={j.state === 'now' ? 'var(--sf-primary)' : 'var(--sf-accent)'}
                           />
                           <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)', whiteSpace: 'nowrap' }}>
-                            {j.state === 'now' ? `${j.progress}%` : j.eta.split(' · ')[1]}
+                            {j.state === 'now' ? `${j.progress}%` : (j.eta.split(' · ')[1] ?? j.eta)}
                           </span>
                         </div>
                         <div className="sf-mono" style={{ marginTop: 4, fontSize: 10, color: 'var(--sf-muted)' }}>
