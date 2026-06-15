@@ -31,6 +31,23 @@ a {
 
 button {
   font-family: inherit;
+  /* Form controls don't inherit `color` by default — without this, text inside
+     unstyled buttons (e.g. the sidebar profile name) falls back to system black
+     and becomes near-invisible in dark mode. */
+  color: inherit;
+}
+
+/* Keyboard focus shown with a ring (outline), never by recolouring a label or
+   its background — so button text can't collide with its background on focus.
+   :focus-visible keeps the ring keyboard-only. */
+:where(button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--sf-primary);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  :where(button, a[href], input, select, textarea):focus-visible {
+    outline-color: Highlight;
+  }
 }
 
 /* Document scrollbar polish */
