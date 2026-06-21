@@ -63,6 +63,18 @@
   background: var(--sf-surface);
   border: 1px solid var(--sf-border);
   border-radius: 12px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: var(--sf-ink);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.type:hover {
+  border-color: var(--sf-border-strong);
+  background: var(--sf-surface-2);
 }
 .form {
   display: flex;

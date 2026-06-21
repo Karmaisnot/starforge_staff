@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useServices } from '@/hooks/useServices.js';
 import { useAsync } from '@/hooks/useAsync.js';
@@ -8,14 +8,28 @@ import { ALL_NAV } from './navConfig.js';
 import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { MobileTabs } from './MobileTabs.jsx';
+import { CommandPalette } from './CommandPalette.jsx';
 import styles from './AppShell.module.css';
 
 /** Responsive application chrome: sidebar / topbar / mobile tabs around the routed page. */
 export function AppShell() {
   const [drawer, setDrawer] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { pathname } = useLocation();
   const { t } = useT();
   const { ai } = useServices();
+
+  // Global ⌘K / Ctrl+K opens the command palette from anywhere in the app.
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const { data: teacher } = useTeacher();
   const { data: badges } = useNavBadges();
@@ -36,13 +50,19 @@ export function AppShell() {
       {drawer && <div className={styles.scrim} onClick={() => setDrawer(false)} />}
 
       <div className={styles.col}>
-        <TopBar title={title} teacher={teacher} onOpenDrawer={() => setDrawer(true)} />
+        <TopBar
+          title={title}
+          teacher={teacher}
+          onOpenDrawer={() => setDrawer(true)}
+          onOpenSearch={() => setPaletteOpen(true)}
+        />
         <main className={styles.main}>
           <Outlet />
         </main>
       </div>
 
       <MobileTabs badges={badges ?? {}} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

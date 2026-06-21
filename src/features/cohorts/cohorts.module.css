@@ -173,9 +173,14 @@
   color: var(--sf-ink);
 }
 .rosterMore {
+  display: block;
+  width: 100%;
   padding: 10px 18px;
   text-align: center;
+  background: none;
+  border: none;
   border-top: 1px solid var(--sf-border);
+  font-family: inherit;
   font-size: 12px;
   color: var(--sf-primary);
   font-weight: 600;

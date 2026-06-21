@@ -26,7 +26,8 @@ const SCALE = { sm: 0.62, md: 0.82, lg: 1.0 };
 
 /**
  * @param {{ kind?: 'up'|'down', size?: 'sm'|'md'|'lg', recipient?: string,
- *           reason?: string, issuer?: string, when?: string, typeName?: string }} props
+ *           reason?: string, issuer?: string, when?: string, typeName?: string,
+ *           onClick?: Function }} props
  */
 export function StudentCard({
   kind = 'up',
@@ -36,13 +37,32 @@ export function StudentCard({
   issuer,
   when,
   typeName,
+  onClick,
 }) {
   const p = KIND_PALETTE[kind];
   const s = SCALE[size] ?? SCALE.md;
   const name = typeName || (kind === 'up' ? 'Yulduz karta' : 'Ogohlantirish');
 
+  // When an onClick is supplied the card becomes a real, keyboard-operable control;
+  // otherwise it stays a plain decorative artifact (no misleading affordance).
+  const interactive = typeof onClick === 'function';
+  const interactiveProps = interactive
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick,
+        onKeyDown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(e);
+          }
+        },
+      }
+    : {};
+
   return (
     <div
+      {...interactiveProps}
       style={{
         width: 240 * s,
         height: 320 * s,
@@ -57,6 +77,7 @@ export function StudentCard({
         boxShadow: `0 ${6 * s}px ${20 * s}px rgba(54,30,14,0.18), inset 0 1px 0 rgba(255,255,255,0.45)`,
         color: p.ink,
         flexShrink: 0,
+        cursor: interactive ? 'pointer' : undefined,
       }}
     >
       <div style={{ position: 'absolute', right: -30 * s, top: -30 * s, opacity: 0.18 }}>

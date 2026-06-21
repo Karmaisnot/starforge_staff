@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
@@ -58,9 +58,8 @@ function NewGroupModal({ open, onClose, onCreate }) {
   );
 }
 
-function AttendanceModal({ open, onClose, cohort }) {
+function AttendanceModal({ open, onClose, cohort, onSave }) {
   const { t } = useT();
-  const toast = useToast();
   const { data: roster } = useRoster(open ? cohort?.id : undefined);
   const [present, setPresent] = useState({});
   // Reset selections each time the modal opens or the cohort changes, so one
@@ -71,7 +70,10 @@ function AttendanceModal({ open, onClose, cohort }) {
   const list = roster ?? [];
   const presentCount = list.filter((s) => present[s.id] !== false).length;
   const save = () => {
-    toast(`${cohort?.name} · ${presentCount}/${list.length} ${t('common.attendance')}`, 'success');
+    const total = list.length;
+    // Guard empty roster: keep current attendance by passing null percent.
+    const percent = total === 0 ? null : Math.round((presentCount / total) * 100);
+    onSave?.(cohort?.id, percent, presentCount, total);
     onClose();
   };
   return (
@@ -218,9 +220,14 @@ function Roster({ cohortId }) {
         </div>
       ))}
       {sorted.length > ROSTER_CAP && (
-        <div className={styles.rosterMore} onClick={() => setExpanded((e) => !e)}>
+        <button
+          type="button"
+          className={styles.rosterMore}
+          aria-expanded={expanded}
+          onClick={() => setExpanded((e) => !e)}
+        >
           {expanded ? t('cohorts.showLess') : `${t('cohorts.showMore')} · ${sorted.length - ROSTER_CAP}`}
-        </div>
+        </button>
       )}
       <StudentModal student={selected} onClose={() => setSelected(null)} />
     </Card>
@@ -237,6 +244,15 @@ export function CohortsPage() {
   const [levelFilter, setLevelFilter] = useState(null);
   const [newOpen, setNewOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
+  // Optimistic, session-local attendance overrides keyed by cohort id -> percent.
+  const [attendanceOverrides, setAttendanceOverrides] = useState({});
+  const rosterRef = useRef(null);
+
+  const saveAttendance = (cohortId, percent, present, total) => {
+    if (cohortId == null || percent == null) return;
+    setAttendanceOverrides((m) => ({ ...m, [cohortId]: percent }));
+    toast(`${t('cohorts.attendanceSaved')} · ${present}/${total}`, 'success');
+  };
 
   const createGroup = (draft) => {
     const id = `g-${Date.now()}`;
@@ -313,8 +329,8 @@ export function CohortsPage() {
                       {c.studentCount}
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span className="sf-mono" style={{ fontSize: 13, fontWeight: 700, color: attendanceTone(c.attendance) }}>
-                        {c.attendance}%
+                      <span className="sf-mono" style={{ fontSize: 13, fontWeight: 700, color: attendanceTone(attendanceOverrides[c.id] ?? c.attendance) }}>
+                        {attendanceOverrides[c.id] ?? c.attendance}%
                       </span>
                     </div>
                     <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
@@ -349,7 +365,7 @@ export function CohortsPage() {
                     </div>
                     <div className={styles.heroStats}>
                       {[
-                        { v: `${cur.attendance}%`, l: t('cohorts.tAttendance') },
+                        { v: `${attendanceOverrides[cur.id] ?? cur.attendance}%`, l: t('cohorts.tAttendance') },
                         { v: `↑${cur.up}`, l: t('common.upCard') },
                         { v: `↓${cur.down}`, l: t('common.downCard') },
                         { v: '12', l: t('common.task') },
@@ -367,14 +383,20 @@ export function CohortsPage() {
                       <Button variant="cream-ghost" onClick={() => navigate('/cards')}>
                         {t('cohorts.giveCard')}
                       </Button>
-                      <Button variant="cream-ghost" onClick={() => toast(`${cur.studentCount} ${plural(locale, 'students', cur.studentCount)}`)}>
+                      <Button
+                        variant="cream-ghost"
+                        aria-label={t('cohorts.viewRoster')}
+                        onClick={() => rosterRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      >
                         {cur.studentCount} {plural(locale, 'students', cur.studentCount)}
                       </Button>
                     </div>
                   </div>
                 </div>
 
-                <Roster key={cur.id} cohortId={cur.id} />
+                <div ref={rosterRef}>
+                  <Roster key={cur.id} cohortId={cur.id} />
+                </div>
 
                 <div className={styles.aiCard}>
                   <div className={styles.aiBg} />
@@ -390,7 +412,7 @@ export function CohortsPage() {
             </div>
 
             <NewGroupModal open={newOpen} onClose={() => setNewOpen(false)} onCreate={createGroup} />
-            <AttendanceModal open={attendanceOpen} onClose={() => setAttendanceOpen(false)} cohort={cur} />
+            <AttendanceModal open={attendanceOpen} onClose={() => setAttendanceOpen(false)} cohort={cur} onSave={saveAttendance} />
           </>
         );
       }}

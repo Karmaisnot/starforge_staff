@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Button, Card, Chip, Icon, ProgressBar, Segmented, Stepper, StarMark } from '@/ui';
@@ -19,16 +19,35 @@ function QuickPrint({ library, onAdd }) {
   const [format, setFormat] = useState('A4');
   const [color, setColor] = useState('bw');
   const [side, setSide] = useState('2');
+  const [uploadName, setUploadName] = useState('');
+  const fileInputRef = useRef(null);
 
   const total = copies * PAGES_PER_COPY;
 
+  const pickUpload = () => {
+    setSource('upload');
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadName(file.name);
+      toast(`${tt('print.fileChosen')} · ${file.name}`, 'success');
+    }
+    // Reset so re-picking the same file fires change again.
+    event.target.value = '';
+  };
+
   const addToQueue = () => {
+    const doc = source === 'upload' && uploadName ? uploadName : `${tt('print.quick')} · ${format}`;
     onAdd({
-      doc: `${tt('print.quick')} · ${format}`,
+      doc,
       copies,
       size: `${format} · ${color === 'bw' ? tt('print.bw') : tt('print.colorful')}`,
       printer: 'HP LaserJet',
       icon: 'doc',
+      side,
     });
     toast(`${total} ${plural(locale, 'pages', total)} ${tt('print.queueToast')}`, 'success');
   };
@@ -49,10 +68,7 @@ function QuickPrint({ library, onAdd }) {
           </button>
           <button
             className={`${styles.sourceBtn} ${source === 'upload' ? styles.sourceOn : ''}`}
-            onClick={() => {
-              setSource('upload');
-              toast(tt('print.upload'));
-            }}
+            onClick={pickUpload}
           >
             <Icon name="upload" size={18} />
             <div>
@@ -60,7 +76,20 @@ function QuickPrint({ library, onAdd }) {
               <div style={{ fontSize: 10, color: 'var(--sf-muted)' }}>{tt('print.uploadHint')}</div>
             </div>
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
         </div>
+        {source === 'upload' && uploadName && (
+          <div style={{ fontSize: 11, color: 'var(--sf-primary)', fontWeight: 600, wordBreak: 'break-all' }}>
+            {tt('print.fileChosen')} · {uploadName}
+          </div>
+        )}
 
         <div className={styles.formRow}>
           <span className={styles.formL}>{tt('print.copies')}</span>

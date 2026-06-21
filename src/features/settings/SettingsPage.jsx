@@ -11,13 +11,29 @@ import styles from './settings.module.css';
 
 const LANG_LABELS = { uz: "O'zbekcha", ru: 'Русский', en: 'English' };
 
-function Toggle({ on, onClick }) {
+// localStorage key + static default toggle values, kept locale-independent so they
+// can seed lazy state and be merged over persisted values (new keys still default).
+const SETTINGS_KEY = 'sf-settings';
+const TOGGLE_DEFAULTS = {
+  notifPush: true,
+  notifCards: true,
+  notifMgmt: true,
+  notifSurvey: false,
+  shareProfile: true,
+  anonSurvey: true,
+  aiData: true,
+  betaCalendar: false,
+  betaVoice: false,
+};
+
+function Toggle({ on, onClick, label }) {
   return (
     <button
       type="button"
       className={`${styles.toggle} ${on ? styles.toggleOn : ''}`}
       onClick={onClick}
       aria-pressed={on}
+      aria-label={label}
     >
       <span className={styles.knob} />
     </button>
@@ -69,42 +85,55 @@ export function SettingsPage() {
     {
       title: t('settings.notifications'),
       items: [
-        { key: 'notifPush', label: t('settings.notifPush'), default: true },
-        { key: 'notifCards', label: t('settings.notifCards'), default: true },
-        { key: 'notifMgmt', label: t('settings.notifMgmt'), default: true },
-        { key: 'notifSurvey', label: t('settings.notifSurvey'), default: false },
+        { key: 'notifPush', label: t('settings.notifPush') },
+        { key: 'notifCards', label: t('settings.notifCards') },
+        { key: 'notifMgmt', label: t('settings.notifMgmt') },
+        { key: 'notifSurvey', label: t('settings.notifSurvey') },
       ],
     },
     {
       title: t('settings.privacy'),
       items: [
-        { key: 'shareProfile', label: t('settings.shareProfile'), default: true },
-        { key: 'anonSurvey', label: t('settings.anonSurvey'), default: true },
-        { key: 'aiData', label: t('settings.aiData'), default: true },
+        { key: 'shareProfile', label: t('settings.shareProfile') },
+        { key: 'anonSurvey', label: t('settings.anonSurvey') },
+        { key: 'aiData', label: t('settings.aiData') },
       ],
     },
     {
       title: t('settings.beta'),
       items: [
-        { key: 'betaCalendar', label: t('settings.betaCalendar'), default: false },
-        { key: 'betaVoice', label: t('settings.betaVoice'), default: false },
+        { key: 'betaCalendar', label: t('settings.betaCalendar') },
+        { key: 'betaVoice', label: t('settings.betaVoice') },
       ],
     },
   ];
 
-  // Toggle state is seeded once from the section defaults above — a single source
-  // of truth, so a new switch never needs to be declared in two places.
-  const [toggles, setToggles] = useState(() =>
-    Object.fromEntries(
-      sections.flatMap((s) => s.items.map((item) => [item.key, item.default])),
-    ),
-  );
+  // Seed from localStorage merged over TOGGLE_DEFAULTS so persisted choices
+  // survive a reload while any newly added key still gets its default.
+  const [toggles, setToggles] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+      return { ...TOGGLE_DEFAULTS, ...(saved || {}) };
+    } catch {
+      return TOGGLE_DEFAULTS;
+    }
+  });
+
+  // Persist on every change; ignore quota/serialization errors.
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(toggles));
+    } catch {
+      /* ignore quota/serialization errors */
+    }
+  }, [toggles]);
   const flip = (key, label) => {
-    setToggles((tg) => {
-      const next = !tg[key];
-      toast(`${label}: ${next ? t('settings.on') : t('settings.off')}`);
-      return { ...tg, [key]: next };
-    });
+    // Compute the next value from the current render's state, then update + toast
+    // OUTSIDE the updater — calling toast() (a setState) inside it would fire a
+    // "setState while rendering another component" warning.
+    const next = !toggles[key];
+    setToggles((tg) => ({ ...tg, [key]: next }));
+    toast(`${label}: ${next ? t('settings.on') : t('settings.off')}`);
   };
 
   if (loggedOut) {
@@ -163,7 +192,7 @@ export function SettingsPage() {
               {section.items.map((item) => (
                 <div key={item.key} className={styles.row}>
                   <span>{item.label}</span>
-                  <Toggle on={toggles[item.key]} onClick={() => flip(item.key, item.label)} />
+                  <Toggle on={toggles[item.key]} onClick={() => flip(item.key, item.label)} label={item.label} />
                 </div>
               ))}
             </Card>

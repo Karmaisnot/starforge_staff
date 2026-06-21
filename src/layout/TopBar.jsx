@@ -4,9 +4,10 @@ import { useT } from '@/hooks/useT.js';
 import styles from './AppShell.module.css';
 
 /**
- * @param {{ title: string, teacher: object|null, onOpenDrawer: Function }} props
+ * @param {{ title: string, teacher: object|null, onOpenDrawer: Function,
+ *           onOpenSearch: Function }} props
  */
-export function TopBar({ title, teacher, onOpenDrawer }) {
+export function TopBar({ title, teacher, onOpenDrawer, onOpenSearch }) {
   const navigate = useNavigate();
   const { t } = useT();
   return (
@@ -19,11 +20,11 @@ export function TopBar({ title, teacher, onOpenDrawer }) {
         <Icon name="chevR" size={12} style={{ color: 'var(--sf-muted)' }} />
         <span className={styles.crumbLabel}>{title}</span>
       </div>
-      <div className={styles.search}>
+      <button type="button" className={styles.search} onClick={onOpenSearch} aria-label={t('shell.searchAll')}>
         <Icon name="search" size={16} style={{ color: 'var(--sf-muted)' }} />
         <span>{t('shell.searchAll')}</span>
         <span className={styles.searchKbd}>⌘K</span>
-      </div>
+      </button>
       <div className={styles.topActions}>
         <button className={styles.topBtn} title={t('nav.ai')} onClick={() => navigate('/ai')}>
           <Icon name="ai" size={18} />

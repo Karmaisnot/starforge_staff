@@ -21,6 +21,9 @@ export default {
     token: 'tokens',
     menu: 'Menu',
     appearance: 'Appearance',
+    commandPlaceholder: 'Go to a page…',
+    noResults: 'Nothing found',
+    pagesGroup: 'Pages',
   },
   common: {
     loading: 'Loading…',
@@ -78,6 +81,8 @@ export default {
     activity: 'Recent activity',
     now: 'Now',
     next: 'Next',
+    taskDone: 'Task completed',
+    taskUndone: 'Marked as not done',
   },
   cohorts: {
     title: 'Groups',
@@ -103,6 +108,8 @@ export default {
     aiQuote:
       '“The class is stable overall. Otabek and Sherzod received Down cards in the last 2 weeks — a short talk is recommended.”',
     showMore: 'Show all · 18 more',
+    attendanceSaved: 'Attendance saved',
+    viewRoster: 'Show student roster',
   },
   tasks: {
     title: 'Tasks',
@@ -146,6 +153,11 @@ export default {
     downloaded: 'Chat downloaded',
     menu: 'Menu',
     emptyHint: 'Pick a prompt or ask a question to start this conversation.',
+    reply:
+      'I prepared a quick summary for your request. The group is stable overall, but a few students need support. Want to give a card or assign a task?',
+    menuDownload: 'Download chat',
+    menuClear: 'Clear chat',
+    cleared: 'Chat cleared',
   },
   print: {
     title: 'Print',
@@ -178,6 +190,7 @@ export default {
     bw: 'B/W',
     sided: 'sided',
     queueToast: 'added to queue',
+    fileChosen: 'File selected',
   },
   surveys: {
     title: 'Surveys',
@@ -195,6 +208,11 @@ export default {
     commentQ: "Comment (optional)",
     submitted: "Submitted",
     now: "Just now",
+    resultTitle: 'Survey results',
+    yourRating: 'Your rating',
+    yourComment: 'Comment',
+    noComment: 'No comment',
+    noDetails: 'Details for this survey are not available.',
   },
   mgmt: {
     title: 'Management',
@@ -245,6 +263,9 @@ export default {
   notifications: {
     title: 'Notifications',
     subtitle: '9 total · 4 new',
+    markedRead: 'Marked as read',
+    markAll: 'Mark all read',
+    allRead: 'All notifications marked read',
   },
   settings: {
     title: 'Settings',

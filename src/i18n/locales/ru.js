@@ -21,6 +21,9 @@ export default {
     token: 'токен',
     menu: 'Меню',
     appearance: 'Оформление',
+    commandPlaceholder: 'Перейти к странице…',
+    noResults: 'Ничего не найдено',
+    pagesGroup: 'Страницы',
   },
   common: {
     loading: 'Загрузка…',
@@ -78,6 +81,8 @@ export default {
     activity: 'Последняя активность',
     now: 'Сейчас',
     next: 'Следующий',
+    taskDone: 'Задача выполнена',
+    taskUndone: 'Возвращена в работу',
   },
   cohorts: {
     title: 'Группы',
@@ -103,6 +108,8 @@ export default {
     aiQuote:
       '«Класс в целом стабилен. Отабек и Шерзод за последние 2 недели получили Down-карты — рекомендуется короткая беседа.»',
     showMore: 'Показать всех · ещё 18',
+    attendanceSaved: 'Посещаемость сохранена',
+    viewRoster: 'Показать список учеников',
   },
   tasks: {
     title: 'Задачи',
@@ -146,6 +153,11 @@ export default {
     downloaded: 'Диалог скачан',
     menu: 'Меню',
     emptyHint: 'Выберите подсказку или задайте вопрос, чтобы начать беседу.',
+    reply:
+      'Я подготовил сводку по вашему запросу. В целом по группе всё стабильно, но отдельным ученикам нужна поддержка. Хотите выдать карту или поставить задачу?',
+    menuDownload: 'Скачать диалог',
+    menuClear: 'Очистить чат',
+    cleared: 'Чат очищен',
   },
   print: {
     title: 'Печать',
@@ -178,6 +190,7 @@ export default {
     bw: 'Ч/Б',
     sided: 'стор.',
     queueToast: 'добавлено в очередь',
+    fileChosen: 'Файл выбран',
   },
   surveys: {
     title: 'Опросы',
@@ -195,6 +208,11 @@ export default {
     commentQ: "Комментарий (необязательно)",
     submitted: "Отправлено",
     now: "Только что",
+    resultTitle: 'Результаты опроса',
+    yourRating: 'Ваша оценка',
+    yourComment: 'Комментарий',
+    noComment: 'Без комментария',
+    noDetails: 'Детали этого опроса недоступны.',
   },
   mgmt: {
     title: 'Управление',
@@ -245,6 +263,9 @@ export default {
   notifications: {
     title: 'Уведомления',
     subtitle: '9 всего · 4 новых',
+    markedRead: 'Отмечено как прочитанное',
+    markAll: 'Прочитать все',
+    allRead: 'Все уведомления прочитаны',
   },
   settings: {
     title: 'Настройки',

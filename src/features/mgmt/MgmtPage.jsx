@@ -8,13 +8,12 @@ import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './mgmt.module.css';
 
-function ChatPanel({ thread }) {
+function ChatPanel({ thread, sent, onSend }) {
   const navigate = useNavigate();
   const toast = useToast();
   const { t: tt } = useT();
   const { data: transcript } = useMgmtTranscript(thread.id);
   const [draft, setDraft] = useState('');
-  const [sent, setSent] = useState([]);
   const fileRef = useRef(null);
 
   const onAttach = (e) => {
@@ -25,8 +24,9 @@ function ChatPanel({ thread }) {
 
   const send = (e) => {
     e.preventDefault();
-    if (!draft.trim()) return;
-    setSent((s) => [...s, draft.trim()]);
+    const text = draft.trim();
+    if (!text) return;
+    onSend(text);
     setDraft('');
     toast(tt('mgmt.sent'), 'success');
   };
@@ -126,23 +126,28 @@ function ComposeModal({ open, onClose, onCreate }) {
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
 
-  const submit = (e) => {
-    e.preventDefault();
-    if (!name.trim() || !message.trim()) return;
-    onCreate({ name: name.trim(), message: message.trim() });
+  // Reset both fields whenever the modal opens so a cancelled draft never lingers.
+  const close = () => {
     setName('');
     setMessage('');
     onClose();
   };
 
+  const submit = (e) => {
+    e.preventDefault();
+    if (!name.trim() || !message.trim()) return;
+    onCreate({ name: name.trim(), message: message.trim() });
+    close();
+  };
+
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={tt('common.newMessage')}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={close}>
             {tt('common.cancel')}
           </Button>
           <Button variant="primary" icon="send" onClick={submit}>
@@ -175,8 +180,14 @@ export function MgmtPage() {
   const { t: tt } = useT();
   const [openId, setOpenId] = useState(1);
   const [extraThreads, setExtraThreads] = useState([]);
+  // Messages sent this session, kept per-thread so switching conversations and
+  // coming back preserves them (and a newly composed thread shows its first line).
+  const [sentByThread, setSentByThread] = useState({});
   const [composeOpen, setComposeOpen] = useState(false);
   const state = useMgmtThreads();
+
+  const sendMessage = (threadId, text) =>
+    setSentByThread((s) => ({ ...s, [threadId]: [...(s[threadId] ?? []), text] }));
 
   const createThread = ({ name, message }) => {
     const id = `t-${Date.now()}`;
@@ -184,6 +195,9 @@ export function MgmtPage() {
       { id, name, role: tt('mgmt.newThreadRole'), lastMessage: message, time: tt('mgmt.now'), unread: 0, online: false },
       ...list,
     ]);
+    // Seed the new conversation with the typed message so it actually appears
+    // in the chat instead of being thrown away as a preview-only string.
+    setSentByThread((s) => ({ ...s, [id]: [message] }));
     setOpenId(id);
     toast(tt('mgmt.sent'), 'success');
   };
@@ -242,7 +256,12 @@ export function MgmtPage() {
                 ))}
               </Card>
 
-              <ChatPanel key={cur.id} thread={cur} />
+              <ChatPanel
+                key={cur.id}
+                thread={cur}
+                sent={sentByThread[cur.id] ?? []}
+                onSend={(text) => sendMessage(cur.id, text)}
+              />
             </div>
 
             <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} onCreate={createThread} />

@@ -58,13 +58,14 @@ export function SurveysPage() {
   const { t, locale } = useT();
   const state = useSurveysPage();
   const [open, setOpen] = useState(null);
+  const [viewing, setViewing] = useState(null); // history item shown in read-only results modal
   const [done, setDone] = useState([]); // completed survey ids
   const [extraHistory, setExtraHistory] = useState([]);
 
   const submit = (survey, answers) => {
     setDone((ids) => [...ids, survey.id]);
     setExtraHistory((h) => [
-      { title: survey.title, issuer: survey.issuer, status: t('surveys.submitted'), date: t('surveys.now'), skipped: false, rating: answers.rating },
+      { title: survey.title, issuer: survey.issuer, status: t('surveys.submitted'), date: t('surveys.now'), skipped: false, rating: answers.rating, comment: answers.comment },
       ...h,
     ]);
     setOpen(null);
@@ -130,7 +131,7 @@ export function SurveysPage() {
           <h3 className={styles.sectionH}>{t('surveys.historyTitle')}</h3>
           <Card padded={false}>
             {history.map((p, i) => (
-              <button key={i} className={styles.historyRow} onClick={() => toast(p.title)}>
+              <button key={i} className={styles.historyRow} onClick={() => setViewing(p)}>
                 <div
                   className={styles.historyIcon}
                   style={{
@@ -149,6 +150,44 @@ export function SurveysPage() {
           </Card>
 
           <SurveyModal survey={open} onClose={() => setOpen(null)} onSubmit={submit} />
+
+          <Modal
+            open={viewing !== null}
+            onClose={() => setViewing(null)}
+            title={t('surveys.resultTitle')}
+            footer={
+              <Button variant="ghost" onClick={() => setViewing(null)}>
+                {t('common.close')}
+              </Button>
+            }
+          >
+            {viewing && (
+              <>
+                <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.01em', marginBottom: 4 }}>
+                  {viewing.title}
+                </div>
+                <div className={styles.modalMeta}>
+                  {viewing.issuer} · {viewing.status} · <span className="sf-mono">{viewing.date}</span>
+                </div>
+                {viewing.rating == null && viewing.comment == null ? (
+                  <div className={styles.modalField}>
+                    <span style={{ color: 'var(--sf-muted)' }}>{t('surveys.noDetails')}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.modalField}>
+                      <span>{t('surveys.yourRating')}</span>
+                      <div className="sf-mono">{viewing.rating}/5</div>
+                    </div>
+                    <div className={styles.modalField}>
+                      <span>{t('surveys.yourComment')}</span>
+                      <div>{viewing.comment ? viewing.comment : <span style={{ color: 'var(--sf-muted)' }}>{t('surveys.noComment')}</span>}</div>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </Modal>
         </>
         );
       }}

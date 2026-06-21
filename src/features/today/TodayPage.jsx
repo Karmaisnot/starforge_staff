@@ -18,6 +18,7 @@ import {
 import { slotRailColor } from '@/domain/models/lesson.js';
 import { priorityColor } from '@/domain/models/task.js';
 import { useToday } from '@/hooks/data.js';
+import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './today.module.css';
 
@@ -26,11 +27,17 @@ const WIDGET_KEYS = ['schedule', 'recentCards', 'pendingTasks', 'printQueue', 's
 export function TodayPage() {
   const navigate = useNavigate();
   const { t } = useT();
+  const toast = useToast();
   const state = useToday();
   const [widgetsOpen, setWidgetsOpen] = useState(false);
   const [hidden, setHidden] = useState({});
+  const [doneTasks, setDoneTasks] = useState({});
   const show = (key) => !hidden[key];
   const toggleWidget = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
+  const toggleTask = (key) => {
+    setDoneTasks((d) => ({ ...d, [key]: !d[key] }));
+    toast(doneTasks[key] ? t('today.taskUndone') : t('today.taskDone'));
+  };
   const stop = (fn) => (e) => {
     e.stopPropagation();
     fn();
@@ -179,6 +186,7 @@ export function TodayPage() {
                       issuer={c.issuer}
                       when={c.when}
                       typeName={c.typeName}
+                      onClick={() => navigate('/cards')}
                     />
                   ))}
                 </div>
@@ -201,7 +209,19 @@ export function TodayPage() {
                       className={styles.taskRail}
                       style={{ background: task.urgent ? 'var(--sf-danger)' : task.projectColor }}
                     />
-                    <div className={styles.taskCheck} />
+                    <button
+                      type="button"
+                      className={styles.taskCheck}
+                      aria-label={t('tasks.toggleState')}
+                      aria-pressed={Boolean(doneTasks[i])}
+                      onClick={() => toggleTask(i)}
+                      style={{
+                        background: doneTasks[i] ? 'var(--sf-success)' : 'transparent',
+                        borderColor: doneTasks[i] ? 'var(--sf-success)' : 'var(--sf-border-strong)',
+                      }}
+                    >
+                      {doneTasks[i] && <Icon name="check" size={11} stroke={3} style={{ color: '#fffcf5' }} />}
+                    </button>
                     <div className={styles.taskBody}>
                       <div className={styles.taskChips}>
                         {task.fromMgmt && <Chip tone="ink">{t('common.mgmtFull')}</Chip>}
@@ -213,7 +233,15 @@ export function TodayPage() {
                           {task.project}
                         </Chip>
                       </div>
-                      <div className={styles.taskTitle}>{task.title}</div>
+                      <div
+                        className={styles.taskTitle}
+                        style={{
+                          textDecoration: doneTasks[i] ? 'line-through' : 'none',
+                          color: doneTasks[i] ? 'var(--sf-muted)' : undefined,
+                        }}
+                      >
+                        {task.title}
+                      </div>
                     </div>
                     <span
                       className={`sf-mono ${styles.taskPri}`}

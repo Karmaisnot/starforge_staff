@@ -313,3 +313,41 @@
 /* Conversation search input */
 .searchInput { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; color: var(--sf-ink); width: 100%; }
 .searchInput::placeholder { color: var(--sf-muted); }
+
+/* Chat overflow menu */
+.menuWrap { position: relative; }
+.menuScrim { position: fixed; inset: 0; z-index: 20; }
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 180px;
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(20, 16, 11, 0.22);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sf-ink);
+}
+.menuItem:hover {
+  background: var(--sf-surface-2);
+}

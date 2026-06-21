@@ -16,16 +16,11 @@ export function AiPage() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState('');
-  const [sent, setSent] = useState([]);
+  // Messages typed this session, kept per-conversation so switching threads
+  // (and coming back) preserves what you sent. Each item is { role, text }.
+  const [convMsgs, setConvMsgs] = useState({});
   const [query, setQuery] = useState('');
-
-  const send = (text) => {
-    const value = (text ?? draft).trim();
-    if (!value) return;
-    setSent((s) => [...s, value]);
-    setDraft('');
-    toast(tt('ai.writing'));
-  };
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <AsyncBoundary state={state}>
@@ -37,20 +32,42 @@ export function AiPage() {
         // instead of mislabeling this conversation's data under their name.
         const activeConv = d.conversations.find((c) => c.id === activeId);
         const isWorkspaceConv = activeId === d.active?.id;
+        const msgs = convMsgs[activeId] ?? [];
         const filteredConvs = d.conversations.filter((g) =>
           String(g.name).toLowerCase().includes(query.toLowerCase()),
         );
+
+        // Append the user's message, then a (mock) AI reply shortly after — scoped
+        // to the conversation it was sent from so a late reply can't land elsewhere.
+        const send = (text) => {
+          const value = (text ?? draft).trim();
+          if (!value || !activeId) return;
+          setDraft('');
+          setConvMsgs((m) => ({ ...m, [activeId]: [...(m[activeId] ?? []), { role: 'user', text: value }] }));
+          toast(tt('ai.writing'));
+          const targetId = activeId;
+          const reply = tt('ai.reply');
+          setTimeout(() => {
+            setConvMsgs((m) => ({ ...m, [targetId]: [...(m[targetId] ?? []), { role: 'ai', text: reply }] }));
+          }, 600);
+        };
+
+        const clearChat = () => {
+          setConvMsgs((m) => ({ ...m, [activeId]: [] }));
+          setMenuOpen(false);
+          toast(tt('ai.cleared'));
+        };
+
         const downloadChat = () => {
           const text = [
             String(activeConv?.name ?? ''),
             '',
-            // Only the workspace conversation actually renders the transcript;
-            // for other conversations export just their own sent messages so the
-            // download matches what's on screen instead of conversation #1's data.
+            // Only the workspace conversation renders the canned transcript; for the
+            // rest, export just the session messages so the file matches the screen.
             ...(isWorkspaceConv
               ? [t.outgoing1, `${t.reply.leadItalic}${t.reply.leadRest}`, t.outgoing2]
               : []),
-            ...sent,
+            ...msgs.map((mm) => `${mm.role === 'ai' ? 'AI: ' : ''}${mm.text}`),
           ].join('\n');
           const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
           const a = document.createElement('a');
@@ -58,6 +75,7 @@ export function AiPage() {
           a.download = `${String(activeConv?.name ?? 'chat')}.txt`;
           a.click();
           URL.revokeObjectURL(url);
+          setMenuOpen(false);
           toast(tt('ai.downloaded'));
         };
         return (
@@ -101,8 +119,8 @@ export function AiPage() {
                     className={`${styles.group} ${activeId === g.id ? styles.on : ''}`}
                     onClick={() => {
                       setSelectedId(g.id);
-                      setSent([]);
                       setDraft('');
+                      setMenuOpen(false);
                     }}
                   >
                     <div className={styles.groupMark} style={{ background: g.color }}>
@@ -147,12 +165,35 @@ export function AiPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className={styles.iconBtn} onClick={downloadChat}>
+                    <button className={styles.iconBtn} onClick={downloadChat} aria-label={tt('ai.menuDownload')}>
                       <Icon name="download" size={14} />
                     </button>
-                    <button className={styles.iconBtn} onClick={() => toast(tt('ai.menu'))}>
-                      <Icon name="more" size={14} />
-                    </button>
+                    <div className={styles.menuWrap}>
+                      <button
+                        className={styles.iconBtn}
+                        onClick={() => setMenuOpen((o) => !o)}
+                        aria-haspopup="menu"
+                        aria-expanded={menuOpen}
+                        aria-label={tt('ai.menu')}
+                      >
+                        <Icon name="more" size={14} />
+                      </button>
+                      {menuOpen && (
+                        <>
+                          <div className={styles.menuScrim} onClick={() => setMenuOpen(false)} />
+                          <div className={styles.menu} role="menu">
+                            <button className={styles.menuItem} role="menuitem" onClick={downloadChat}>
+                              <Icon name="download" size={14} />
+                              {tt('ai.menuDownload')}
+                            </button>
+                            <button className={styles.menuItem} role="menuitem" onClick={clearChat}>
+                              <Icon name="x" size={14} />
+                              {tt('ai.menuClear')}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -201,7 +242,11 @@ export function AiPage() {
                               <div style={{ fontSize: 12.5, fontWeight: 600 }}>{s.name}</div>
                               <div style={{ fontSize: 10.5, color: 'var(--sf-warn)' }}>{s.reason}</div>
                             </div>
-                            <Button variant="soft" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => navigate('/cards')}>
+                            <Button
+                              variant="soft"
+                              style={{ padding: '4px 10px', fontSize: 11 }}
+                              onClick={() => navigate('/cards', { state: { issueTo: s.name } })}
+                            >
                               {tt('ai.giveCard')}
                             </Button>
                           </div>
@@ -215,7 +260,7 @@ export function AiPage() {
 
                       <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         {t.reply.actions.map((a) => (
-                          <Button key={a.label} variant="soft" icon={a.icon} iconSize={12} onClick={() => toast(a.label)}>
+                          <Button key={a.label} variant="soft" icon={a.icon} iconSize={12} onClick={() => send(a.label)}>
                             {a.label}
                           </Button>
                         ))}
@@ -230,7 +275,7 @@ export function AiPage() {
                     </>
                   )}
 
-                  {!isWorkspaceConv && sent.length === 0 && (
+                  {!isWorkspaceConv && msgs.length === 0 && (
                     <div
                       style={{
                         padding: '48px 24px',
@@ -243,11 +288,18 @@ export function AiPage() {
                     </div>
                   )}
 
-                  {sent.map((m, i) => (
-                    <div key={i} className={styles.out}>
-                      {m}
-                    </div>
-                  ))}
+                  {msgs.map((mm, i) =>
+                    mm.role === 'ai' ? (
+                      <div key={i} className={styles.inWrap}>
+                        <div className={styles.aiMini}>Ai</div>
+                        <div className={styles.in}>{mm.text}</div>
+                      </div>
+                    ) : (
+                      <div key={i} className={styles.out}>
+                        {mm.text}
+                      </div>
+                    ),
+                  )}
                 </div>
 
                 <form

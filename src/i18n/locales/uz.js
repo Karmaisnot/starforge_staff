@@ -21,6 +21,9 @@ export default {
     token: 'token',
     menu: 'Menyu',
     appearance: "Ko'rinish",
+    commandPlaceholder: "Sahifaga o'tish…",
+    noResults: 'Hech narsa topilmadi',
+    pagesGroup: 'Sahifalar',
   },
   common: {
     loading: 'Yuklanmoqda…',
@@ -78,6 +81,8 @@ export default {
     activity: "So'nggi faollik",
     now: 'Hozir',
     next: 'Keyingi',
+    taskDone: 'Vazifa bajarildi',
+    taskUndone: 'Qayta faollashtirildi',
   },
   cohorts: {
     title: 'Guruhlar',
@@ -103,6 +108,8 @@ export default {
     aiQuote:
       '“Sinf umuman barqaror. Otabek va Sherzod oxirgi 2 haftada Down karta olgan — qisqa suhbat tavsiya etiladi.”',
     showMore: "Hammasini ko'rsatish · 18 ta yana",
+    attendanceSaved: 'Davomat saqlandi',
+    viewRoster: "O'quvchilar ro'yxatini ko'rsatish",
   },
   tasks: {
     title: 'Vazifalar',
@@ -146,6 +153,11 @@ export default {
     downloaded: 'Suhbat yuklab olindi',
     menu: 'Menyu',
     emptyHint: 'Suhbatni boshlash uchun shablon tanlang yoki savol bering.',
+    reply:
+      "So'rovingiz bo'yicha qisqa sarhisob tayyorladim. Guruh umuman barqaror, lekin ayrim o'quvchilarga e'tibor kerak. Karta berasizmi yoki vazifa qo'yasizmi?",
+    menuDownload: 'Suhbatni yuklab olish',
+    menuClear: 'Suhbatni tozalash',
+    cleared: 'Suhbat tozalandi',
   },
   print: {
     title: 'Print',
@@ -178,6 +190,7 @@ export default {
     bw: 'B/W',
     sided: 'tomonlama',
     queueToast: "navbatga qo'shildi",
+    fileChosen: 'Fayl tanlandi',
   },
   surveys: {
     title: "So'rovnomalar",
@@ -195,6 +208,11 @@ export default {
     commentQ: "Izoh (ixtiyoriy)",
     submitted: "Yuborildi",
     now: "Hozir",
+    resultTitle: "So'rovnoma natijalari",
+    yourRating: 'Sizning bahoyingiz',
+    yourComment: 'Izoh',
+    noComment: 'Izohsiz',
+    noDetails: "Bu so'rovnoma tafsilotlari mavjud emas.",
   },
   mgmt: {
     title: 'Boshqaruv',
@@ -245,6 +263,9 @@ export default {
   notifications: {
     title: 'Bildirishnomalar',
     subtitle: '9 ta · 4 ta yangi',
+    markedRead: "O'qilgan deb belgilandi",
+    markAll: "Hammasini o'qilgan deb belgilash",
+    allRead: "Barcha bildirishnomalar o'qildi",
   },
   settings: {
     title: 'Sozlamalar',

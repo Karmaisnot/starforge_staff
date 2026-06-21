@@ -260,6 +260,12 @@
   height: 16px;
   border-radius: 4px;
   border: 1.5px solid var(--sf-border-strong);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .taskBody {
   min-width: 0;

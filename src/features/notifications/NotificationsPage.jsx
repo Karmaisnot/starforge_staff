@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
-import { FilterChip, Icon } from '@/ui';
+import { Button, FilterChip, Icon } from '@/ui';
 import { notificationToneStyle } from '@/domain/models/notification.js';
 import { useNotificationsPage } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
@@ -14,9 +14,25 @@ export function NotificationsPage() {
   const [filter, setFilter] = useState('all');
   const [read, setRead] = useState({});
   const state = useNotificationsPage();
-  const markRead = (key, title) => {
+
+  // Single source of truth for a row's stable read-state key. Per-row dim and
+  // mark-all MUST derive the key identically, so both go through this helper.
+  const rowKey = (groupLabel, item) => `${groupLabel}-${item.title}-${item.time}`;
+
+  const markRead = (key) => {
     setRead((r) => ({ ...r, [key]: true }));
-    toast(title);
+    toast(t('notifications.markedRead'));
+  };
+
+  const markAllRead = (groups) => {
+    setRead((r) => {
+      const next = { ...r };
+      for (const g of groups) {
+        for (const it of g.items) next[rowKey(g.label, it)] = true;
+      }
+      return next;
+    });
+    toast(t('notifications.allRead'));
   };
 
   return (
@@ -27,17 +43,22 @@ export function NotificationsPage() {
             title={t('notifications.title')}
             subtitle={t('notifications.subtitle')}
             right={
-              <div className={styles.filters}>
-                {d.filters.map((f) => (
-                  <FilterChip
-                    key={f.key}
-                    label={f.label}
-                    count={f.count}
-                    active={filter === f.key}
-                    onClick={() => setFilter(f.key)}
-                  />
-                ))}
-              </div>
+              <>
+                <div className={styles.filters}>
+                  {d.filters.map((f) => (
+                    <FilterChip
+                      key={f.key}
+                      label={f.label}
+                      count={f.count}
+                      active={filter === f.key}
+                      onClick={() => setFilter(f.key)}
+                    />
+                  ))}
+                </div>
+                <Button variant="soft" icon="check" onClick={() => markAllRead(d.groups)}>
+                  {t('notifications.markAll')}
+                </Button>
+              </>
             }
           />
 
@@ -52,15 +73,16 @@ export function NotificationsPage() {
                       const c = notificationToneStyle(it.tone);
                       // Stable key from resolved content, not the post-filter
                       // index — otherwise read-state mislabels rows when the
-                      // active filter changes the list order/length.
-                      const key = `${g.label}-${it.title}-${it.time}`;
+                      // active filter changes the list order/length. Derived via
+                      // rowKey so per-row and mark-all stay perfectly in sync.
+                      const key = rowKey(g.label, it);
                       const isRead = read[key];
                       return (
                         <button
                           key={key}
                           className={styles.row}
                           style={{ opacity: isRead ? 0.5 : 1 }}
-                          onClick={() => markRead(key, it.title)}
+                          onClick={() => markRead(key)}
                         >
                           <div className={styles.icon} style={{ background: c.bg, color: c.fg, borderColor: c.border }}>
                             {it.icon === 'AI' ? (
