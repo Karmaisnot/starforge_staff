@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StarForge EDU · Ustozlar uchun</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  html, body { margin: 0; padding: 0; min-height: 100%; background: var(--sf-bg); }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--sf-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--sf-border-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--sf-muted); }
+
+  /* Loading state */
+  #root:empty::before {
+    content: '';
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 40px; height: 40px; border: 3px solid var(--sf-border);
+    border-top-color: var(--sf-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body data-palette="saroy" data-theme="light">
+<div id="root"></div>
+
+<!-- Reuse atoms from the mobile project -->
+<script type="text/babel" src="../tweaks-panel.jsx"></script>
+<script type="text/babel" src="../tf-components.jsx"></script>
+
+<!-- Web app -->
+<script type="text/babel" src="../web-shell.jsx"></script>
+<script type="text/babel" src="../web-today.jsx"></script>
+<script type="text/babel" src="../web-cohorts.jsx"></script>
+<script type="text/babel" src="../web-tasks.jsx"></script>
+<script type="text/babel" src="../web-ai.jsx"></script>
+<script type="text/babel" src="../web-misc.jsx"></script>
+<script type="text/babel" src="../web-settings.jsx"></script>
+<script type="text/babel" src="../web-stubs.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+
+const DEFAULTS = /*EDITMODE-BEGIN*/{
+  "palette": "saroy",
+  "dark": false
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setT] = useTweaks(DEFAULTS);
+  const [active, setActive] = React.useState(() => {
+    return location.hash.replace('#', '') || 'today';
+  });
+
+  React.useEffect(() => {
+    document.body.setAttribute('data-palette', t.palette);
+    document.body.setAttribute('data-theme', t.dark ? 'dark' : 'light');
+  }, [t.palette, t.dark]);
+
+  React.useEffect(() => {
+    location.hash = active;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [active]);
+
+  React.useEffect(() => {
+    const onHash = () => setActive(location.hash.replace('#', '') || 'today');
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  const onNav = (id) => setActive(id);
+
+  const badges = {
+    tasks: 3,
+    surveys: 2,
+    mgmt: 3,
+    notif: 4,
+  };
+
+  return (
+    <>
+      <WebShell active={active} onNav={onNav} badges={badges}>
+        {active === 'today' && <TodayPage onNav={onNav} />}
+        {active === 'cohorts' && <CohortsPage onNav={onNav} />}
+        {active === 'tasks' && <TasksPage onNav={onNav} />}
+        {active === 'ai' && <AiPage onNav={onNav} />}
+        {active === 'print' && <PrintPage onNav={onNav} />}
+        {active === 'surveys' && <SurveysPage onNav={onNav} />}
+        {active === 'mgmt' && <MgmtPage onNav={onNav} />}
+        {active === 'cards' && <CardsPage onNav={onNav} />}
+        {active === 'materials' && <MaterialsPage onNav={onNav} />}
+        {active === 'notif' && <NotifPage onNav={onNav} />}
+        {active === 'settings' && <SettingsPage onNav={onNav} />}
+      </WebShell>
+
+      {/* Inject CSS strings from the various pages */}
+      <style>{todayStyles}</style>
+
+      <TweaksPanel title="StarForge tweaks">
+        <TweakSection label="Mavzu">
+          <TweakToggle label="Qora mavzu · Dark mode" value={t.dark} onChange={(v) => setT('dark', v)} />
+        </TweakSection>
+        <TweakSection label="Palitra">
+          <div style={{ padding: '4px 14px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {[
+              { id: 'saroy',     l: 'Saroy · Terracotta', colors: ['#B85535', '#D89A2E', '#FBF6EC'] },
+              { id: 'marvarid',  l: 'Marvarid · Pearl',   colors: ['#1F6B66', '#C4892F', '#F2F1ED'] },
+              { id: 'samarqand', l: 'Samarqand · Indigo', colors: ['#2A3D8F', '#D8A22A', '#F4F1E8'] },
+              { id: 'daryo',     l: 'Daryo · Sage',       colors: ['#4F6A3A', '#BA8C2C', '#F1EFE6'] },
+            ].map(opt => {
+              const on = opt.id === t.palette;
+              return (
+                <button key={opt.id} type="button" onClick={() => setT('palette', opt.id)} style={{
+                  padding: 10, borderRadius: 12, cursor: 'pointer',
+                  background: on ? 'var(--om-tweaks-active-bg, #f3eee4)' : 'transparent',
+                  border: on ? '1.5px solid #B85535' : '1px solid var(--om-tweaks-border, #ddd)',
+                  display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start',
+                  fontFamily: 'inherit', textAlign: 'left',
+                }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {opt.colors.map((c, i) => (
+                      <div key={i} style={{ width: 26, height: 26, borderRadius: 8, background: c,
+                                              border: '1px solid rgba(0,0,0,0.08)' }} />
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>{opt.l}</span>
+                </button>
+              );
+            })}
+          </div>
+        </TweakSection>
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

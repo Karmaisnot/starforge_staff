@@ -1,0 +1,329 @@
+/* StarForge EDU — design tokens
+   Warm editorial modern, Central Asian geometric undertone.
+   All app frames inherit from --sf-* tokens; palettes/dark mode flip values. */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Type */
+  --sf-font-ui: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --sf-font-display: 'Instrument Serif', 'Manrope', serif;
+  --sf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Default palette: SAROY (terracotta) — warm cream, terracotta, saffron */
+  --sf-bg: #FBF6EC;
+  --sf-surface: #FFFCF5;
+  --sf-surface-2: #F4EBD8;
+  --sf-surface-3: #EADFC4;
+  --sf-ink: #1F1B16;
+  --sf-ink-2: #3A332A;
+  --sf-muted: #847663;
+  --sf-muted-2: #B0A38B;
+  --sf-border: #E5D9BE;
+  --sf-border-strong: #CFC0A0;
+
+  --sf-primary: #B85535;        /* terracotta */
+  --sf-primary-hover: #A04524;
+  --sf-primary-soft: #F3D9CC;
+  --sf-primary-ink: #5A2412;
+
+  --sf-accent: #D89A2E;         /* saffron */
+  --sf-accent-soft: #F6E4B8;
+  --sf-accent-ink: #6B4810;
+
+  --sf-success: #4F7B3B;
+  --sf-success-soft: #DDEACA;
+  --sf-warn: #C68423;
+  --sf-warn-soft: #F6E4B8;
+  --sf-danger: #B33A2A;
+  --sf-danger-soft: #F3D2CC;
+
+  /* AI gets its own quiet treatment — saffron halo on cream */
+  --sf-ai: #8B5A0F;
+  --sf-ai-bg: linear-gradient(135deg, #F9EAC4 0%, #F6DCB0 100%);
+  --sf-ai-border: #E2BC72;
+
+  --sf-shadow-sm: 0 1px 2px rgba(54, 30, 14, 0.06);
+  --sf-shadow-md: 0 6px 18px rgba(54, 30, 14, 0.08), 0 2px 4px rgba(54, 30, 14, 0.04);
+  --sf-shadow-lg: 0 18px 40px rgba(54, 30, 14, 0.12), 0 4px 10px rgba(54, 30, 14, 0.06);
+
+  --sf-radius-sm: 8px;
+  --sf-radius: 14px;
+  --sf-radius-lg: 22px;
+  --sf-radius-xl: 28px;
+}
+
+/* Palette: MARVARID (Pearl) — cool pearl gray + teal accent */
+[data-palette="marvarid"] {
+  --sf-bg: #F2F1ED;
+  --sf-surface: #FBFAF6;
+  --sf-surface-2: #E8E5DC;
+  --sf-surface-3: #DDD9CD;
+  --sf-ink: #1A1F22;
+  --sf-ink-2: #2F363B;
+  --sf-muted: #6C7479;
+  --sf-muted-2: #A0A6AA;
+  --sf-border: #DDDAD0;
+  --sf-border-strong: #BFBBA8;
+
+  --sf-primary: #1F6B66;
+  --sf-primary-hover: #155A56;
+  --sf-primary-soft: #CFE3DF;
+  --sf-primary-ink: #0B2E2C;
+
+  --sf-accent: #C4892F;
+  --sf-accent-soft: #F2E2BD;
+  --sf-accent-ink: #5C3E0F;
+
+  --sf-ai: #1F4A5B;
+  --sf-ai-bg: linear-gradient(135deg, #DCEAEE 0%, #C7DDE3 100%);
+  --sf-ai-border: #8FB6BF;
+}
+
+/* Palette: SAMARQAND — deep indigo tilework + saffron */
+[data-palette="samarqand"] {
+  --sf-bg: #F4F1E8;
+  --sf-surface: #FCFAF2;
+  --sf-surface-2: #ECE6D3;
+  --sf-surface-3: #DED5BB;
+  --sf-ink: #15182A;
+  --sf-ink-2: #262A40;
+  --sf-muted: #6C6E7A;
+  --sf-muted-2: #A0A1AB;
+  --sf-border: #DCD4BA;
+  --sf-border-strong: #BFB596;
+
+  --sf-primary: #2A3D8F;
+  --sf-primary-hover: #1F2F73;
+  --sf-primary-soft: #D2D8EE;
+  --sf-primary-ink: #121A45;
+
+  --sf-accent: #D8A22A;
+  --sf-accent-soft: #F4E1AA;
+  --sf-accent-ink: #5E4108;
+
+  --sf-ai: #3D2A8F;
+  --sf-ai-bg: linear-gradient(135deg, #E5DDF4 0%, #D2C6EE 100%);
+  --sf-ai-border: #A793D6;
+}
+
+/* Palette: DARYO — sage river + brass */
+[data-palette="daryo"] {
+  --sf-bg: #F1EFE6;
+  --sf-surface: #FAF8EF;
+  --sf-surface-2: #E5E4D2;
+  --sf-surface-3: #D7D5BD;
+  --sf-ink: #1A1E18;
+  --sf-ink-2: #2F352A;
+  --sf-muted: #6F7264;
+  --sf-muted-2: #A2A593;
+  --sf-border: #D9D6BD;
+  --sf-border-strong: #B7B399;
+
+  --sf-primary: #4F6A3A;
+  --sf-primary-hover: #3E5A29;
+  --sf-primary-soft: #DBE5C7;
+  --sf-primary-ink: #1F2C13;
+
+  --sf-accent: #BA8C2C;
+  --sf-accent-soft: #ECDBA8;
+  --sf-accent-ink: #563E08;
+
+  --sf-ai: #6A5128;
+  --sf-ai-bg: linear-gradient(135deg, #EDE2C2 0%, #DECBA0 100%);
+  --sf-ai-border: #B49A5E;
+}
+
+/* DARK MODE overlay — applied on top of any palette */
+[data-theme="dark"] {
+  --sf-bg: #14110D;
+  --sf-surface: #1D1914;
+  --sf-surface-2: #28231C;
+  --sf-surface-3: #332D24;
+  --sf-ink: #F2EADA;
+  --sf-ink-2: #D8CFBC;
+  --sf-muted: #9E927E;
+  --sf-muted-2: #6E6555;
+  --sf-border: #3A3329;
+  --sf-border-strong: #4E4435;
+
+  --sf-primary: #E58B6A;
+  --sf-primary-hover: #ED9C7F;
+  --sf-primary-soft: #3A2418;
+  --sf-primary-ink: #FCDCCA;
+
+  --sf-accent: #EBBE5E;
+  --sf-accent-soft: #3D2F12;
+  --sf-accent-ink: #FCE3A4;
+
+  --sf-ai: #F0CB7F;
+  --sf-ai-bg: linear-gradient(135deg, #2D241B 0%, #3A2D1E 100%);
+  --sf-ai-border: #66502A;
+
+  --sf-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sf-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --sf-shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"][data-palette="marvarid"] {
+  --sf-primary: #6FB6AE;
+  --sf-primary-hover: #84C7BF;
+  --sf-primary-soft: #18302E;
+}
+[data-theme="dark"][data-palette="samarqand"] {
+  --sf-primary: #8A9AE0;
+  --sf-primary-hover: #9DABE6;
+  --sf-primary-soft: #1A2147;
+}
+[data-theme="dark"][data-palette="daryo"] {
+  --sf-primary: #95B27A;
+  --sf-primary-hover: #A8C290;
+  --sf-primary-soft: #1E2A14;
+}
+
+/* Frame container — everything inside a phone reads these tokens */
+.sf-app {
+  font-family: var(--sf-font-ui);
+  color: var(--sf-ink);
+  background: var(--sf-bg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01', 'ss02';
+  letter-spacing: -0.005em;
+}
+.sf-app * { box-sizing: border-box; }
+.sf-mono { font-family: var(--sf-font-mono); font-feature-settings: 'tnum'; }
+.sf-serif { font-family: var(--sf-font-display); font-style: italic; letter-spacing: -0.01em; }
+.sf-tnum { font-variant-numeric: tabular-nums; }
+
+/* Cards / surfaces */
+.sf-card {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-lg);
+}
+.sf-divider {
+  height: 1px;
+  background: var(--sf-border);
+}
+
+/* Scrollbar polish */
+.sf-app ::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Generic chips */
+.sf-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--sf-surface-2);
+  color: var(--sf-ink-2);
+  border: 1px solid var(--sf-border);
+}
+.sf-chip--primary { background: var(--sf-primary-soft); color: var(--sf-primary-ink); border-color: transparent; }
+.sf-chip--accent  { background: var(--sf-accent-soft);  color: var(--sf-accent-ink);  border-color: transparent; }
+.sf-chip--ai      { background: var(--sf-ai-bg); color: var(--sf-ai); border-color: var(--sf-ai-border); }
+.sf-chip--success { background: var(--sf-success-soft); color: var(--sf-success); border-color: transparent; }
+.sf-chip--danger  { background: var(--sf-danger-soft); color: var(--sf-danger); border-color: transparent; }
+
+/* AI surface — applied to AI cards for the signature "halo" */
+.sf-ai-surface {
+  background: var(--sf-ai-bg);
+  border: 1px solid var(--sf-ai-border);
+  color: var(--sf-ink);
+  position: relative;
+  overflow: hidden;
+}
+.sf-ai-surface::after {
+  content: '';
+  position: absolute; inset: -50%;
+  background: radial-gradient(circle at 30% 30%, color-mix(in oklab, var(--sf-accent) 22%, transparent) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Subtle warm grid pattern used as backdrop in some screens */
+.sf-pattern {
+  background-image:
+    radial-gradient(circle at 1px 1px, var(--sf-border-strong) 1px, transparent 0);
+  background-size: 14px 14px;
+  opacity: 0.35;
+}
+
+/* 8-point star — the StarForge mark. Drawn with conic + clip */
+.sf-mark {
+  display: inline-block;
+  width: 1em; height: 1em;
+  background: currentColor;
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+
+/* Buttons */
+.sf-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 15px;
+  letter-spacing: -0.005em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.sf-btn:active { transform: scale(0.98); }
+.sf-btn--primary { background: var(--sf-primary); color: #FFFCF5; }
+.sf-btn--ghost { background: transparent; color: var(--sf-ink); border-color: var(--sf-border-strong); }
+.sf-btn--soft { background: var(--sf-surface-2); color: var(--sf-ink); }
+.sf-btn--block { width: 100%; }
+
+
+/* ───────────────────────────────────────────────
+   Elegant signature watermark — appears on every page
+   that loads tokens.css (all StarForge apps).
+   ─────────────────────────────────────────────── */
+body::after {
+  content: "Made with \2665  ·  StarForge EDU";
+  position: fixed;
+  left: 50%; bottom: 7px; transform: translateX(-50%);
+  z-index: 2147483000;
+  font-family: var(--sf-font-display, 'Instrument Serif', serif);
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: 0.012em;
+  color: var(--sf-ink, #1F1B16);
+  opacity: 0.22;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  body::after { font-size: 11px; bottom: 5px; }
+}
+@media print { body::after { display: none; } }
+
+
+/* ═══ EXTRA PALETTES (v2) ═══ */
+[data-palette="shafaq"]{--sf-bg:#FBF1EC;--sf-surface:#FFF8F4;--sf-surface-2:#F6E4DA;--sf-surface-3:#EFD3C4;--sf-ink:#2A1A14;--sf-ink-2:#43302A;--sf-muted:#8A6F64;--sf-muted-2:#B9A296;--sf-border:#EBD7CB;--sf-border-strong:#D6BBA9;--sf-primary:#C2410C;--sf-primary-hover:#A8350A;--sf-primary-soft:#F7DAC9;--sf-primary-ink:#5C1E06;--sf-accent:#D6608A;--sf-accent-soft:#F7D9E4;--sf-accent-ink:#6E1F3E;--sf-ai:#A8453F;--sf-ai-bg:linear-gradient(135deg,#F9E2D4 0%,#F6D2D9 100%);--sf-ai-border:#E0A893;}
+[data-palette="zumrad"]{--sf-bg:#EEF4EF;--sf-surface:#F8FBF8;--sf-surface-2:#DFEBE2;--sf-surface-3:#CEDFD2;--sf-ink:#10231A;--sf-ink-2:#23362B;--sf-muted:#637067;--sf-muted-2:#9DAaa0;--sf-border:#D6E3D9;--sf-border-strong:#B4C9B9;--sf-primary:#0E7C5A;--sf-primary-hover:#0A6549;--sf-primary-soft:#CDE8DC;--sf-primary-ink:#06301F;--sf-accent:#C08A2E;--sf-accent-soft:#F0E2BE;--sf-accent-ink:#5A3E0E;--sf-ai:#1E6E55;--sf-ai-bg:linear-gradient(135deg,#D8ECE0 0%,#C7E2D2 100%);--sf-ai-border:#8FBFA6;}
+[data-palette="siyoh"]{--sf-bg:#F2F1EE;--sf-surface:#FCFBF9;--sf-surface-2:#E7E5DF;--sf-surface-3:#D8D5CC;--sf-ink:#1A1916;--sf-ink-2:#33312C;--sf-muted:#6E6B63;--sf-muted-2:#A29E94;--sf-border:#DCD9D0;--sf-border-strong:#BCB8AC;--sf-primary:#2B2A26;--sf-primary-hover:#161410;--sf-primary-soft:#DEDBD2;--sf-primary-ink:#1A1916;--sf-accent:#9A7B3F;--sf-accent-soft:#E9DEC6;--sf-accent-ink:#4E3C15;--sf-ai:#5A574E;--sf-ai-bg:linear-gradient(135deg,#E6E3DA 0%,#D9D5CA 100%);--sf-ai-border:#B3AE9F;}
+[data-palette="lola"]{--sf-bg:#FAF1EF;--sf-surface:#FFF8F6;--sf-surface-2:#F4DFDB;--sf-surface-3:#EBCAC4;--sf-ink:#2A1417;--sf-ink-2:#43292C;--sf-muted:#8A6A6C;--sf-muted-2:#BC9EA0;--sf-border:#EBD2CE;--sf-border-strong:#D9B2AD;--sf-primary:#B3122F;--sf-primary-hover:#950E27;--sf-primary-soft:#F6D2D6;--sf-primary-ink:#560713;--sf-accent:#C28A1E;--sf-accent-soft:#F1E2B8;--sf-accent-ink:#5C3F08;--sf-ai:#9C2A3A;--sf-ai-bg:linear-gradient(135deg,#F7DBDD 0%,#F2CBD0 100%);--sf-ai-border:#DA9CA3;}
+[data-palette="tong"]{--sf-bg:#EEF2F7;--sf-surface:#F8FAFD;--sf-surface-2:#DEE6F0;--sf-surface-3:#CBD8E8;--sf-ink:#131D2A;--sf-ink-2:#273341;--sf-muted:#5F6B7A;--sf-muted-2:#9Aa6B4;--sf-border:#D6E0EC;--sf-border-strong:#B2C2D6;--sf-primary:#2563A8;--sf-primary-hover:#1C4F8C;--sf-primary-soft:#D2E2F2;--sf-primary-ink:#0E2A4C;--sf-accent:#D98A4E;--sf-accent-soft:#F7E2CE;--sf-accent-ink:#6E3C18;--sf-ai:#3A5B9C;--sf-ai-bg:linear-gradient(135deg,#DCE7F4 0%,#CBD9EE 100%);--sf-ai-border:#94B0D6;}
+[data-palette="qahrabo"]{--sf-bg:#F8F2E8;--sf-surface:#FDF9F0;--sf-surface-2:#EFE3CE;--sf-surface-3:#E2D0B2;--sf-ink:#271E10;--sf-ink-2:#3F3220;--sf-muted:#86745A;--sf-muted-2:#B7A684;--sf-border:#E8D9BC;--sf-border-strong:#D2BC92;--sf-primary:#B8791C;--sf-primary-hover:#9C6313;--sf-primary-soft:#F1DFB6;--sf-primary-ink:#583808;--sf-accent:#3F7A6A;--sf-accent-soft:#CFE6DD;--sf-accent-ink:#163E33;--sf-ai:#8A6320;--sf-ai-bg:linear-gradient(135deg,#F2E3BE 0%,#EAD4A2 100%);--sf-ai-border:#CBA862;}
+/* dark primary overrides for new palettes */
+[data-theme="dark"][data-palette="shafaq"]{--sf-primary:#F0875A;--sf-primary-hover:#F59C73;--sf-primary-soft:#3A2016;}
+[data-theme="dark"][data-palette="zumrad"]{--sf-primary:#4FBF94;--sf-primary-hover:#6AD0A8;--sf-primary-soft:#10301F;}
+[data-theme="dark"][data-palette="siyoh"]{--sf-primary:#CFC9BB;--sf-primary-hover:#E2DCCD;--sf-primary-soft:#2A2823;}
+[data-theme="dark"][data-palette="lola"]{--sf-primary:#F0566E;--sf-primary-hover:#F57286;--sf-primary-soft:#3A1018;}
+[data-theme="dark"][data-palette="tong"]{--sf-primary:#5B97DA;--sf-primary-hover:#74AAE6;--sf-primary-soft:#12253E;}
+[data-theme="dark"][data-palette="qahrabo"]{--sf-primary:#E0A94E;--sf-primary-hover:#EBBC6A;--sf-primary-soft:#33260F;}
