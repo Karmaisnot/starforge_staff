@@ -5,3 +5,6 @@ dist-ssr
 .vite
 .DS_Store
 *.log
+
+# local env (keep machine-local; copy from .env.example if added)
+.env

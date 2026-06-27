@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+coverage/
+
+# workflow working artifacts
+.contract.json
+.audit.json
+
+# local SQLite dev database (regenerate: npm run prisma:migrate && npm run db:seed)
+prisma/dev.db
+prisma/*.db-journal
