@@ -14,6 +14,7 @@ import { TaskRepository } from './modules/tasks/task.repository';
 import { TaskService } from './modules/tasks/task.service';
 import { AiRepository } from './modules/ai/ai.repository';
 import { AiService } from './modules/ai/ai.service';
+import { AnthropicAiResponder } from './modules/ai/aiResponder';
 import { PrintRepository } from './modules/print/print.repository';
 import { PrintService } from './modules/print/print.service';
 import { SurveyRepository } from './modules/surveys/survey.repository';
@@ -86,6 +87,17 @@ export function createContainer(config: AppConfig, db: Db): Container {
   const print = new PrintService(printRepo);
   const mgmt = new MgmtService(mgmtRepo);
 
+  // When an Anthropic key is configured, the AI chat is backed by the live
+  // Messages API; otherwise the service falls back to its offline responder so
+  // the assistant stays functional with zero external dependencies (DIP — the
+  // swap happens only here).
+  const aiResponder = config.aiEnabled
+    ? new AnthropicAiResponder({
+        apiKey: config.ANTHROPIC_API_KEY,
+        model: config.ANTHROPIC_MODEL,
+      })
+    : undefined;
+
   // Composite read-models depend on the domain services above.
   const dashboard = new DashboardService({
     repo: dashboardRepo,
@@ -104,7 +116,7 @@ export function createContainer(config: AppConfig, db: Db): Container {
     cohorts,
     cards,
     tasks,
-    ai: new AiService(aiRepo),
+    ai: new AiService(aiRepo, aiResponder),
     print,
     surveys,
     mgmt,
