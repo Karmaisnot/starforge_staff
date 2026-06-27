@@ -202,6 +202,8 @@ export default {
     question: 'questions',
     start: 'Start',
     continue: 'Resume',
+    skip: 'Skip',
+    skipped: 'Skipped',
     historyTitle: 'History · 3',
     submit: "Submit",
     rateQ: "Overall, how useful was this?",

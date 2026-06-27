@@ -19,4 +19,20 @@ export class AiService {
     const all = await this.aiRepo.listConversations();
     return all.find((c) => c.active) ?? all[0] ?? null;
   }
+  /**
+   * Persist a chat message and return the server's view of the exchange.
+   * @param {string} conversationId
+   * @param {string} text
+   * @returns {Promise<{userMessage:object, aiMessage:object, usage:object}>}
+   */
+  sendMessage(conversationId, text) {
+    return this.aiRepo.sendMessage(conversationId, text);
+  }
+  /**
+   * Clear all messages in a conversation server-side.
+   * @param {string} conversationId
+   */
+  clearMessages(conversationId) {
+    return this.aiRepo.clearMessages(conversationId);
+  }
 }

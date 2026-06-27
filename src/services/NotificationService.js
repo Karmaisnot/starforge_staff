@@ -9,4 +9,12 @@ export class NotificationService {
   getFilters() {
     return this.notificationRepo.listFilters();
   }
+  /** @param {string} id @returns {Promise<object>} */
+  markRead(id) {
+    return this.notificationRepo.markRead(id);
+  }
+  /** @returns {Promise<object>} */
+  markAllRead() {
+    return this.notificationRepo.markAllRead();
+  }
 }

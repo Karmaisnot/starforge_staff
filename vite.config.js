@@ -13,5 +13,13 @@ export default defineConfig({
   server: {
     port: 5173,
     open: false,
+    // Proxy API calls to the Fastify backend so the SPA and API share an origin
+    // in dev (no CORS, cookies/headers flow through). Backend runs on :4000.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
   },
 });

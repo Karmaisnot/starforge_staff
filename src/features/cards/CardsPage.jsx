@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Button, Card, Modal, Segmented, Stat, StarMark } from '@/ui';
-import { useCardsPage } from '@/hooks/data.js';
+import { useServices } from '@/hooks/useServices.js';
+import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './cards.module.css';
@@ -120,15 +121,26 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
 }
 
 export function CardsPage() {
+  const { cards: cardService } = useServices();
   const toast = useToast();
-  const { t: tr } = useT();
+  const { t: tr, locale } = useT();
   const navigate = useNavigate();
   const location = useLocation();
   // null = closed; an object = open (optionally carrying a preset for the form).
   const [modal, setModal] = useState(null);
   // Cards issued this session, prepended to the loaded recent list (optimistic).
   const [issued, setIssued] = useState([]);
-  const state = useCardsPage();
+  // Bumping this key re-runs the loader so the server truth reconciles after a write.
+  const [reloadKey, setReloadKey] = useState(0);
+  const state = useAsync(
+    () =>
+      Promise.all([
+        cardService.getRecent(),
+        cardService.getTypesByKind(),
+        cardService.getStats(),
+      ]).then(([recent, types, stats]) => ({ recent, types, stats })),
+    [locale, reloadKey],
+  );
 
   // Honour a "give a card to <name>" deep-link (from AI focus students / cohorts),
   // then clear the router state so the modal doesn't re-open on every re-render.
@@ -140,10 +152,12 @@ export function CardsPage() {
     }
   }, [location.pathname, location.state, navigate]);
 
-  const issueCard = ({ kind, typeName, recipient, reason }) => {
+  const issueCard = async ({ kind, typeName, recipient, reason }) => {
+    // Optimistic: prepend the card so the recent list reacts instantly.
+    const optimisticId = `c-${Date.now()}`;
     setIssued((list) => [
       {
-        id: `c-${Date.now()}`,
+        id: optimisticId,
         kind,
         recipient,
         cohort: '',
@@ -154,6 +168,18 @@ export function CardsPage() {
       ...list,
     ]);
     toast(`${recipient} · ${typeName}`, 'success');
+
+    // Persist, then refetch so server truth (recent + stats + types counts)
+    // reconciles. The optimistic prepend is dropped once the refetch covers it.
+    try {
+      await cardService.issue({ typeName, kind, recipient, reason });
+      setIssued((list) => list.filter((c) => c.id !== optimisticId));
+      setReloadKey((k) => k + 1);
+    } catch {
+      // Roll back the optimistic prepend and surface the failure.
+      setIssued((list) => list.filter((c) => c.id !== optimisticId));
+      toast(tr('common.error'), 'danger');
+    }
   };
 
   return (

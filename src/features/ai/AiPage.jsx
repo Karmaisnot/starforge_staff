@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { AiBadge, Avatar, Button, Card, Chip, Icon, StarMark } from '@/ui';
-import { useAiPage } from '@/hooks/data.js';
+import { useServices } from '@/hooks/useServices.js';
+import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './ai.module.css';
@@ -11,8 +12,28 @@ import styles from './ai.module.css';
 export function AiPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { t: tt } = useT();
-  const state = useAiPage();
+  const { t: tt, locale } = useT();
+  const { ai } = useServices();
+
+  // Inline the page loader (mirrors useAiPage) so we own a refetch handle: bump
+  // `reloadKey` after a persisted mutation to reconcile with server truth.
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = () => setReloadKey((k) => k + 1);
+  const state = useAsync(
+    () =>
+      Promise.all([
+        ai.getConversations(),
+        ai.getUsage(),
+        ai.getWorkspace(),
+        ai.getActiveConversation(),
+      ]).then(([conversations, usage, workspace, active]) => ({
+        conversations,
+        usage,
+        workspace,
+        active,
+      })),
+    [locale, reloadKey],
+  );
 
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState('');
@@ -37,25 +58,52 @@ export function AiPage() {
           String(g.name).toLowerCase().includes(query.toLowerCase()),
         );
 
-        // Append the user's message, then a (mock) AI reply shortly after — scoped
-        // to the conversation it was sent from so a late reply can't land elsewhere.
-        const send = (text) => {
+        // Append the user's message optimistically, then persist via the API and
+        // append the real AI reply — scoped to the conversation it was sent from so
+        // a late reply can't land elsewhere. On failure, roll back the optimistic
+        // user line and surface the error.
+        const send = async (text) => {
           const value = (text ?? draft).trim();
           if (!value || !activeId) return;
           setDraft('');
           setConvMsgs((m) => ({ ...m, [activeId]: [...(m[activeId] ?? []), { role: 'user', text: value }] }));
           toast(tt('ai.writing'));
           const targetId = activeId;
-          const reply = tt('ai.reply');
-          setTimeout(() => {
-            setConvMsgs((m) => ({ ...m, [targetId]: [...(m[targetId] ?? []), { role: 'ai', text: reply }] }));
-          }, 600);
+          try {
+            const { aiMessage } = await ai.sendMessage(targetId, value);
+            const replyText = String(aiMessage?.text ?? aiMessage?.content ?? tt('ai.reply'));
+            setConvMsgs((m) => ({
+              ...m,
+              [targetId]: [...(m[targetId] ?? []), { role: 'ai', text: replyText }],
+            }));
+            // Reconcile the usage meter (and any server-side state) with truth.
+            refetch();
+          } catch {
+            // Roll back the optimistic user line so the transcript stays honest.
+            setConvMsgs((m) => {
+              const list = m[targetId] ?? [];
+              const idx = list.map((x) => x.text).lastIndexOf(value);
+              if (idx === -1) return m;
+              return { ...m, [targetId]: [...list.slice(0, idx), ...list.slice(idx + 1)] };
+            });
+            toast(tt('common.error'), 'danger');
+          }
         };
 
-        const clearChat = () => {
-          setConvMsgs((m) => ({ ...m, [activeId]: [] }));
+        const clearChat = async () => {
+          const targetId = activeId;
+          const prev = convMsgs[targetId] ?? [];
+          setConvMsgs((m) => ({ ...m, [targetId]: [] }));
           setMenuOpen(false);
           toast(tt('ai.cleared'));
+          try {
+            await ai.clearMessages(targetId);
+            refetch();
+          } catch {
+            // Restore the local transcript if the server refused the clear.
+            setConvMsgs((m) => ({ ...m, [targetId]: prev }));
+            toast(tt('common.error'), 'danger');
+          }
         };
 
         const downloadChat = () => {

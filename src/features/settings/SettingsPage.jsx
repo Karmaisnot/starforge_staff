@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { ThemeControls } from '@/layout/ThemeSwitcher.jsx';
 import { AiBadge, Avatar, Button, Card, Icon, Modal, ProgressBar } from '@/ui';
-import { useTeacher } from '@/hooks/data.js';
 import { useServices } from '@/hooks/useServices.js';
 import { useAsync } from '@/hooks/useAsync.js';
+import { useTheme } from '@/hooks/useTheme.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './settings.module.css';
@@ -43,37 +43,79 @@ function Toggle({ on, onClick, label }) {
 export function SettingsPage() {
   const toast = useToast();
   const { t, locale, locales, setLocale } = useT();
-  const { ai } = useServices();
-  const { data: teacher } = useTeacher();
+  const { ai, account } = useServices();
+  const { palette, dark } = useTheme();
   const { data: usage } = useAsync(() => ai.getUsage(), []);
 
-  // Editable profile overlay on top of the loaded teacher record.
+  // Bump keys give us a refetch handle over useAsync (which exposes none): a
+  // successful write increments the key so the loader re-runs against the server.
+  const [teacherKey, setTeacherKey] = useState(0);
+  const [sessionsKey, setSessionsKey] = useState(0);
+  const reloadTeacher = useCallback(() => setTeacherKey((k) => k + 1), []);
+  const reloadSessions = useCallback(() => setSessionsKey((k) => k + 1), []);
+
+  const { data: teacher } = useAsync(() => account.getTeacher(), [locale, teacherKey]);
+  // Backend settings (toggles + theme + locale). Loaded once; localStorage is the
+  // first-paint cache, the server is the source of truth we reconcile against.
+  const { data: serverSettings } = useAsync(() => account.getSettings(), []);
+  // Active device sessions for the Devices card (re-loaded after an eject).
+  const { data: sessions } = useAsync(() => account.listSessions(), [sessionsKey]);
+
+  // Editable profile overlay on top of the loaded teacher record. Cleared once a
+  // save persists and the refetched teacher carries the new values.
   const [edits, setEdits] = useState(null);
   const profile = { ...teacher, ...edits };
   const [editOpen, setEditOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggedOut, setLoggedOut] = useState(false);
-  // Store stable ids + label keys (not resolved strings) so the device labels
-  // re-localize when the language changes instead of freezing at first mount.
-  const [devices, setDevices] = useState([
-    { id: 'web', labelKey: 'settings.deviceWeb' },
-    { id: 'mobile', labelKey: 'settings.deviceMobile' },
-  ]);
+  // Optimistically removed session ids — hidden immediately, reconciled by refetch.
+  const [ejected, setEjected] = useState([]);
+  const devices = (sessions ?? []).filter((s) => !ejected.includes(s.id));
+  // Map a server session to a display label, reusing the existing localized
+  // strings for the known web/mobile platforms and falling back to the UA.
+  const deviceLabel = (dvc) => {
+    if (dvc.platform === 'web') return t('settings.deviceWeb');
+    if (dvc.platform === 'mobile') return t('settings.deviceMobile');
+    return dvc.userAgent || dvc.platform || t('settings.devices');
+  };
   const [draft, setDraft] = useState({ name: '', username: '' });
   useEffect(() => {
     if (editOpen) setDraft({ name: profile.name ?? '', username: profile.username ?? '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editOpen]);
 
-  const ejectDevice = (id) => {
-    setDevices((list) => list.filter((d) => d.id !== id));
+  const ejectDevice = async (id) => {
+    // Optimistic hide, then persist and reload; restore on failure.
+    setEjected((list) => [...list, id]);
     toast(t('settings.sessionEnded'));
+    try {
+      await account.ejectSession(id);
+      reloadSessions();
+      setEjected((list) => list.filter((x) => x !== id));
+    } catch {
+      setEjected((list) => list.filter((x) => x !== id));
+      toast(t('common.error'), 'error');
+    }
   };
-  const saveProfile = (e) => {
+  const saveProfile = async (e) => {
     e.preventDefault();
-    setEdits({ name: draft.name.trim() || profile.name, username: draft.username.trim() || profile.username });
+    const next = {
+      name: draft.name.trim() || profile.name,
+      username: draft.username.trim() || profile.username,
+    };
+    // Optimistic overlay so the card updates instantly.
+    setEdits(next);
     setEditOpen(false);
     toast(t('settings.profileSaved'), 'success');
+    try {
+      await account.updateTeacher({ name: next.name, username: next.username });
+      // Server truth now carries the change — refetch and drop the local overlay.
+      reloadTeacher();
+      setEdits(null);
+    } catch {
+      setEdits(null); // roll back the optimistic overlay
+      toast(t('common.error'), 'error');
+    }
   };
   const confirmLogout = () => {
     setLogoutOpen(false);
@@ -119,6 +161,19 @@ export function SettingsPage() {
     }
   });
 
+  // When the backend settings arrive, reconcile the toggle keys over the cached
+  // state — the server is the source of truth, localStorage only a first-paint cache.
+  useEffect(() => {
+    if (!serverSettings) return;
+    setToggles((tg) => {
+      const merged = { ...tg };
+      for (const key of Object.keys(TOGGLE_DEFAULTS)) {
+        if (typeof serverSettings[key] === 'boolean') merged[key] = serverSettings[key];
+      }
+      return merged;
+    });
+  }, [serverSettings]);
+
   // Persist on every change; ignore quota/serialization errors.
   useEffect(() => {
     try {
@@ -134,7 +189,39 @@ export function SettingsPage() {
     const next = !toggles[key];
     setToggles((tg) => ({ ...tg, [key]: next }));
     toast(`${label}: ${next ? t('settings.on') : t('settings.off')}`);
+    // Field-level persist: send only the changed key. Roll back the optimistic
+    // flip (and the cache effect follows) if the backend rejects it.
+    account.patchSettings({ [key]: next }).catch(() => {
+      setToggles((tg) => ({ ...tg, [key]: !next }));
+      toast(t('common.error'), 'error');
+    });
   };
+
+  // Persist theme palette/dark changes. ThemeControls mutates the theme context
+  // directly (we cannot edit it), so we observe palette/dark here and patch the
+  // changed field, skipping the initial mount and the server-driven hydration.
+  const themeHydrated = useRef(false);
+  useEffect(() => {
+    if (!serverSettings) return;
+    // First time the server values arrive, treat as hydration (no write-back).
+    themeHydrated.current = true;
+  }, [serverSettings]);
+  const prevPalette = useRef(palette);
+  useEffect(() => {
+    if (prevPalette.current === palette) return;
+    prevPalette.current = palette;
+    if (!themeHydrated.current) return;
+    account.patchSettings({ palette }).catch(() => toast(t('common.error'), 'error'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [palette]);
+  const prevDark = useRef(dark);
+  useEffect(() => {
+    if (prevDark.current === dark) return;
+    prevDark.current = dark;
+    if (!themeHydrated.current) return;
+    account.patchSettings({ dark }).catch(() => toast(t('common.error'), 'error'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dark]);
 
   if (loggedOut) {
     return (
@@ -212,8 +299,10 @@ export function SettingsPage() {
                 aria-label={t('settings.language')}
                 value={locale}
                 onChange={(e) => {
-                  setLocale(e.target.value);
-                  toast(LANG_LABELS[e.target.value]);
+                  const next = e.target.value;
+                  setLocale(next);
+                  toast(LANG_LABELS[next]);
+                  account.patchSettings({ locale: next }).catch(() => toast(t('common.error'), 'error'));
                 }}
               >
                 {locales.map((l) => (
@@ -241,7 +330,7 @@ export function SettingsPage() {
           <Card title={t('settings.devices')} padded={false}>
             {devices.map((dvc) => (
               <div key={dvc.id} className={styles.row}>
-                <span>{t(dvc.labelKey)}</span>
+                <span>{deviceLabel(dvc)}</span>
                 <Button variant="ghost" onClick={() => ejectDevice(dvc.id)}>
                   {t('settings.eject')}
                 </Button>

@@ -9,4 +9,16 @@ export class MgmtService {
   getTranscript(threadId) {
     return this.mgmtRepo.getTranscript(threadId);
   }
+  /** @param {number|string} threadId @param {string} text @returns {Promise<object>} created message */
+  sendMessage(threadId, text) {
+    return this.mgmtRepo.sendMessage(threadId, text);
+  }
+  /** @param {{name:string,message:string}} input @returns {Promise<object>} created thread */
+  createThread(input) {
+    return this.mgmtRepo.createThread(input);
+  }
+  /** @param {number|string} threadId @returns {Promise<object>} */
+  markRead(threadId) {
+    return this.mgmtRepo.markRead(threadId);
+  }
 }

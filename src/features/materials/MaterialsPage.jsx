@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Button, Card, Chip, Icon, Stat } from '@/ui';
-import { useMaterialsPage } from '@/hooks/data.js';
+import { useServices } from '@/hooks/useServices.js';
+import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
@@ -23,24 +24,58 @@ export function MaterialsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t, locale } = useT();
-  const state = useMaterialsPage();
+  const { materials } = useServices();
+  // A reload nonce gives us a real refetch handle on top of useAsync: bumping it
+  // re-runs the loader so server truth replaces the optimistic scratch state.
+  const [reloadKey, setReloadKey] = useState(0);
+  const state = useAsync(
+    () =>
+      Promise.all([materials.getList(), materials.getStats(), materials.getStorage()]).then(
+        ([list, stats, storage]) => ({ list, stats, storage }),
+      ),
+    [locale, reloadKey],
+  );
+  const reload = () => setReloadKey((k) => k + 1);
   const fileRef = useRef(null);
   const [uploaded, setUploaded] = useState([]);
   const [removed, setRemoved] = useState({});
 
-  const removeFile = (file) => {
+  const removeFile = async (file) => {
+    // Optimistic: drop the row instantly so the UI reacts before the network round-trip.
     setUploaded((list) => list.filter((f) => f.id !== file.id));
     setRemoved((r) => ({ ...r, [file.id]: true }));
     toast(`${t('materials.removed')} · ${file.title}`);
+    // Newly uploaded rows that were never persisted have no server id to delete.
+    if (typeof file.id === 'string' && file.id.startsWith('up-')) return;
+    try {
+      await materials.remove(file.id);
+      // Reconcile with server truth; the refetch covers this id so clear the scratch flag.
+      setRemoved((r) => {
+        const rest = { ...r };
+        delete rest[file.id];
+        return rest;
+      });
+      reload();
+    } catch {
+      // Roll back the optimistic removal and surface the failure.
+      setRemoved((r) => {
+        const rest = { ...r };
+        delete rest[file.id];
+        return rest;
+      });
+      toast(`${t('common.error')} · ${file.title}`, 'error');
+    }
   };
 
-  const onPick = (e) => {
+  const onPick = async (e) => {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
     const now = new Date().toLocaleDateString();
     const items = files.map((f, i) => {
       const ext = f.name.split('.').pop()?.toLowerCase() ?? '';
       return {
+        file: f,
+        ext,
         id: `up-${Date.now()}-${i}`,
         title: f.name,
         kind: EXT_KIND[ext] ?? 'doc',
@@ -50,9 +85,31 @@ export function MaterialsPage() {
         date: now,
       };
     });
-    setUploaded((list) => [...items, ...list]);
+    // Optimistic: render the new rows immediately (strip the raw File handle).
+    setUploaded((list) => [...items.map(({ file: _f, ext: _e, ...row }) => row), ...list]);
     toast(`+ ${files.length} ${plural(locale, 'files', files.length)}`, 'success');
     e.target.value = '';
+    try {
+      // Persist metadata for each picked file (no real bytes are uploaded).
+      await Promise.all(
+        items.map((it) =>
+          materials.create({
+            title: it.title,
+            kind: it.kind,
+            sizeBytes: it.file.size,
+            meta: it.meta,
+          }),
+        ),
+      );
+      // Server now owns these rows; drop the optimistic scratch and pull fresh truth.
+      setUploaded([]);
+      reload();
+    } catch {
+      // Roll back the optimistic rows and surface the failure.
+      const failedIds = new Set(items.map((it) => it.id));
+      setUploaded((list) => list.filter((row) => !failedIds.has(row.id)));
+      toast(t('common.error'), 'error');
+    }
   };
 
   // Real client-side download of the (placeholder) material payload.

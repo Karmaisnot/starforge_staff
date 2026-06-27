@@ -3,7 +3,8 @@ import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Button, Card, Chip, Icon, ProgressBar, Segmented, Stepper, StarMark } from '@/ui';
 import { printerStatusTone } from '@/domain/models/print.js';
-import { usePrintPage } from '@/hooks/data.js';
+import { useServices } from '@/hooks/useServices.js';
+import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
@@ -11,7 +12,14 @@ import styles from './print.module.css';
 
 const PAGES_PER_COPY = 8;
 
-function QuickPrint({ library, onAdd }) {
+/** Return a shallow copy of `obj` without the given key (no unused-var binding). */
+function dropKey(obj, key) {
+  const next = { ...obj };
+  delete next[key];
+  return next;
+}
+
+function QuickPrint({ library, printers, onAdd }) {
   const toast = useToast();
   const { t: tt, locale } = useT();
   const [source, setSource] = useState('library');
@@ -41,11 +49,15 @@ function QuickPrint({ library, onAdd }) {
 
   const addToQueue = () => {
     const doc = source === 'upload' && uploadName ? uploadName : `${tt('print.quick')} · ${format}`;
+    // No dedicated printer selector in this form: default to the first
+    // non-locked printer so the job targets a real, available device.
+    const target = (printers ?? []).find((p) => p.status !== 'locked') ?? (printers ?? [])[0];
     onAdd({
+      printerId: target?.id,
       doc,
       copies,
       size: `${format} · ${color === 'bw' ? tt('print.bw') : tt('print.colorful')}`,
-      printer: 'HP LaserJet',
+      printer: target?.name ?? 'HP LaserJet',
       icon: 'doc',
       side,
     });
@@ -158,25 +170,65 @@ function QuickPrint({ library, onAdd }) {
 
 export function PrintPage() {
   const toast = useToast();
-  const { t: tt } = useT();
-  const state = usePrintPage();
+  const { t: tt, locale } = useT();
+  const { print } = useServices();
+  // Local reload key lets a successful mutation pull the server truth
+  // (queue depth + printer state) back into the page.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = () => setReloadKey((k) => k + 1);
+  const state = useAsync(
+    () =>
+      Promise.all([print.getPrinters(), print.getJobs(), print.getLibrary()]).then(
+        ([printers, jobs, library]) => ({ printers, jobs, library }),
+      ),
+    [locale, reloadKey],
+  );
   const [extraJobs, setExtraJobs] = useState([]);
   const [cancelled, setCancelled] = useState({});
 
-  const cancelJob = (job) => {
+  const cancelJob = async (job) => {
+    // Optimistic: drop it from the visible queue immediately.
     setExtraJobs((list) => list.filter((j) => j.id !== job.id));
     setCancelled((c) => ({ ...c, [job.id]: true }));
     toast(`${tt('print.cancelled')} · ${job.doc}`);
+    try {
+      await print.cancelJob(job.id);
+      // Server truth now reflects the cancel; clear scratch state it covers.
+      setExtraJobs((list) => list.filter((j) => j.id !== job.id));
+      setCancelled((c) => dropKey(c, job.id));
+      reload();
+    } catch {
+      // Roll back the optimistic removal so the job reappears.
+      setCancelled((c) => dropKey(c, job.id));
+      toast(tt('common.error'), 'danger');
+    }
   };
 
-  const addJob = (job) => {
+  const addJob = async (job) => {
+    const tempId = `job-${Date.now()}`;
+    // Optimistic: show the queued job right away.
     setExtraJobs((list) => [
-      { id: `job-${Date.now()}`, state: 'queued', progress: 0, eta: tt('print.queued'), ...job },
+      { id: tempId, state: 'queued', progress: 0, eta: tt('print.queued'), ...job },
       ...list,
     ]);
+    try {
+      await print.createJob({
+        printerId: job.printerId,
+        doc: job.doc,
+        copies: job.copies,
+        size: job.size,
+      });
+      // Server now owns this job; drop the optimistic stub and refetch.
+      setExtraJobs((list) => list.filter((j) => j.id !== tempId));
+      reload();
+    } catch {
+      // Roll back the optimistic stub on failure.
+      setExtraJobs((list) => list.filter((j) => j.id !== tempId));
+      toast(tt('common.error'), 'danger');
+    }
   };
   const sendToPrinter = (printer) => {
-    addJob({ doc: printer.name, copies: 1, size: printer.sizes, printer: printer.name, icon: 'print' });
+    addJob({ printerId: printer.id, doc: printer.name, copies: 1, size: printer.sizes, printer: printer.name, icon: 'print' });
     toast(printer.name, 'success');
   };
   const focusQuick = () => {
@@ -292,7 +344,7 @@ export function PrintPage() {
             </div>
 
             <div id="sf-quick-print">
-              <QuickPrint library={d.library} onAdd={addJob} />
+              <QuickPrint library={d.library} printers={d.printers} onAdd={addJob} />
             </div>
           </div>
         </>

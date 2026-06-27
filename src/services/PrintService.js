@@ -12,4 +12,12 @@ export class PrintService {
   getLibrary() {
     return this.printRepo.getLibrary();
   }
+  /** @param {{printerId:string, doc:string, copies?:number, size?:string}} input @returns {Promise<object>} created job */
+  createJob(input) {
+    return this.printRepo.createJob(input);
+  }
+  /** @param {string} id @returns {Promise<object>} */
+  cancelJob(id) {
+    return this.printRepo.cancelJob(id);
+  }
 }

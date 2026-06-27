@@ -202,6 +202,8 @@ export default {
     question: 'savol',
     start: 'Boshlash',
     continue: 'Davom',
+    skip: 'O‘tkazib yuborish',
+    skipped: 'O‘tkazib yuborilgan',
     historyTitle: 'Tarix · 3 ta',
     submit: "Yuborish",
     rateQ: "Umuman, qanchalik foydali edi?",

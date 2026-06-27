@@ -1,0 +1,543 @@
+// StarForge EDU — persistence model (SQLite for local dev; Postgres-portable).
+//
+// Conventions:
+//  - Tenant isolation: every tenant-owned row carries `academyId`; the repository
+//    layer always filters by it (never trusted from the client).
+//  - Localized text is stored as JSON `{ uz, ru, en }`; the API returns it as-is
+//    and the frontend Http adapters resolve it per active locale (mirrors the mock
+//    `respond()` -> deepLocalize pipeline). A field may also hold a plain string
+//    (user-typed content) — deepLocalize passes non-localizable values through.
+//  - Derived metrics (counts, up/down, attendance %, badges, token %, stats) are
+//    COMPUTED on read in the service layer — never stored as the stale literals the
+//    fixtures carried.
+//  - Enums are modelled as String (SQLite has no native enum); values are validated
+//    against domain enums in the application layer.
+//  - Ids are app-generated cuids; seed rows may pin human-readable ids (slugs).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Tenancy & identity
+// ----------------------------------------------------------------------------
+
+model Academy {
+  id        String   @id @default(cuid())
+  name      Json // localized
+  createdAt DateTime @default(now())
+
+  branches          Branch[]
+  subjects          Subject[]
+  teachers          Teacher[]
+  cohorts           Cohort[]
+  students          Student[]
+  attendanceRecords AttendanceRecord[]
+  cardTypes         CardType[]
+  cards             Card[]
+  projects          Project[]
+  tasks             Task[]
+  aiConversations   AiConversation[]
+  printers          Printer[]
+  printJobs         PrintJob[]
+  libraryFiles      LibraryFile[]
+  surveys           Survey[]
+  mgmtThreads       MgmtThread[]
+  notifications     Notification[]
+  materials         Material[]
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  name      Json // localized
+  createdAt DateTime @default(now())
+
+  teachers Teacher[]
+
+  @@index([academyId])
+}
+
+model Subject {
+  id        String  @id @default(cuid())
+  academyId String
+  academy   Academy @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  name      Json // localized
+
+  teacherSubjects TeacherSubject[]
+  cohorts         Cohort[]
+
+  @@index([academyId])
+}
+
+model Teacher {
+  id           String   @id @default(cuid())
+  academyId    String
+  academy      Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  branchId     String
+  branch       Branch   @relation(fields: [branchId], references: [id])
+  name         String
+  username     String
+  role         Json // localized
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  // per-teacher pointer to the AI conversation currently open (avoids a global flag race)
+  activeAiConversationId String?
+
+  subjects          TeacherSubject[]
+  preferences       TeacherPreferences?
+  aiUsage           AiUsage?
+  sessions          AuthSession[]
+  cohorts           Cohort[]
+  cardsIssued       Card[]
+  attendanceRecords AttendanceRecord[]
+  tasks             Task[]
+  aiConversations   AiConversation[]
+  printJobs         PrintJob[]
+  libraryFiles      LibraryFile[]
+  surveyResponses   SurveyResponse[]
+  mgmtThreads       MgmtThread[]
+  notifications     Notification[]
+  materials         Material[]
+
+  @@unique([academyId, username])
+  @@index([academyId])
+}
+
+model TeacherSubject {
+  teacherId String
+  subjectId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  position  Int     @default(0)
+
+  @@id([teacherId, subjectId])
+  @@index([subjectId])
+}
+
+model TeacherPreferences {
+  teacherId    String   @id
+  teacher      Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  locale       String   @default("uz")
+  palette      String   @default("saroy")
+  dark         Boolean  @default(false)
+  notifPush    Boolean  @default(true)
+  notifCards   Boolean  @default(true)
+  notifMgmt    Boolean  @default(true)
+  notifSurvey  Boolean  @default(true)
+  shareProfile Boolean  @default(true)
+  anonSurvey   Boolean  @default(false)
+  aiData       Boolean  @default(true)
+  betaCalendar Boolean  @default(false)
+  betaVoice    Boolean  @default(false)
+  updatedAt    DateTime @updatedAt
+}
+
+model AiUsage {
+  teacherId String   @id
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  used      Int      @default(0)
+  limit     Int      @default(50000)
+  updatedAt DateTime @updatedAt
+}
+
+model AuthSession {
+  id         String    @id @default(cuid())
+  teacherId  String
+  teacher    Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  userAgent  String
+  platform   String // web | mobile | desktop
+  lastSeenAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([teacherId])
+}
+
+// ----------------------------------------------------------------------------
+// Cohorts, students, attendance
+// ----------------------------------------------------------------------------
+
+model Cohort {
+  id           String   @id @default(cuid())
+  academyId    String
+  academy      Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  teacherId    String
+  teacher      Teacher  @relation(fields: [teacherId], references: [id])
+  subjectId    String?
+  subject      Subject? @relation(fields: [subjectId], references: [id])
+  name         String // plain, e.g. "9-B Algebra"
+  level        Json // localized
+  subjectLabel Json // localized (display parity with the `subject` fixture field)
+  room         Json // localized
+  color          String
+  nextAt         DateTime? // real next lesson time
+  nextLabel      Json? // localized display (e.g. "Today · 09:00")
+  lessonsPerWeek Int       @default(0) // weekly cadence; feeds teacher.summary + schedule
+  createdAt      DateTime  @default(now())
+
+  students          Student[]
+  attendanceRecords AttendanceRecord[]
+  cards             Card[]
+  aiConversations   AiConversation[]
+
+  @@index([academyId])
+  @@index([teacherId])
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  cohortId  String?
+  cohort    Cohort?  @relation(fields: [cohortId], references: [id])
+  name      String
+  studentId String // external code, e.g. "DEMO-2026-00042"
+  flag      String? // top | warn | null
+  createdAt DateTime @default(now())
+
+  cards             Card[]
+  attendanceEntries AttendanceEntry[]
+
+  @@index([academyId])
+  @@index([cohortId])
+}
+
+model AttendanceRecord {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  cohortId  String
+  cohort    Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  takenById String
+  takenBy   Teacher  @relation(fields: [takenById], references: [id])
+  takenAt   DateTime @default(now())
+  present   Int
+  total     Int
+  percent   Int
+
+  entries AttendanceEntry[]
+
+  @@index([cohortId])
+}
+
+model AttendanceEntry {
+  id        String           @id @default(cuid())
+  recordId  String
+  record    AttendanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  present   Boolean
+
+  @@unique([recordId, studentId])
+  @@index([studentId])
+}
+
+// ----------------------------------------------------------------------------
+// Cards
+// ----------------------------------------------------------------------------
+
+model CardType {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  kind      String // up | down
+  name      Json // localized
+  subtitle  Json // localized
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  cards Card[]
+
+  @@index([academyId])
+}
+
+model Card {
+  id         String   @id @default(cuid())
+  academyId  String
+  academy    Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  cardTypeId String
+  cardType   CardType @relation(fields: [cardTypeId], references: [id])
+  studentId  String?
+  student    Student? @relation(fields: [studentId], references: [id])
+  cohortId   String?
+  cohort     Cohort?  @relation(fields: [cohortId], references: [id])
+  issuerId   String
+  issuer     Teacher  @relation(fields: [issuerId], references: [id])
+  kind       String // up | down (denormalized from type for fast aggregation)
+  reason     Json? // mixed: localized {uz,ru,en} (seed) or plain user-typed string
+  createdAt  DateTime @default(now())
+
+  @@index([academyId])
+  @@index([cardTypeId])
+  @@index([studentId])
+  @@index([cohortId])
+}
+
+// ----------------------------------------------------------------------------
+// Tasks
+// ----------------------------------------------------------------------------
+
+model TaskColumn {
+  id    String @id // todo | doing | review | done
+  label Json // localized
+  color String
+  order Int
+
+  tasks Task[]
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  name      Json // localized
+  color     String
+  createdAt DateTime @default(now())
+
+  tasks Task[]
+
+  @@index([academyId])
+}
+
+model Task {
+  id            String     @id @default(cuid())
+  academyId     String
+  academy       Academy    @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  columnId      String
+  column        TaskColumn @relation(fields: [columnId], references: [id])
+  projectId     String?
+  project       Project?   @relation(fields: [projectId], references: [id])
+  ownerId       String?
+  owner         Teacher?   @relation(fields: [ownerId], references: [id])
+  title         Json // localized
+  assigner      Json // mixed: plain name OR localized role
+  deadlineLabel Json? // fuzzy display
+  deadlineAt    DateTime? // real date when known
+  priority      String? // P1 | P2 | P3
+  urgent        Boolean    @default(false)
+  fromMgmt      Boolean    @default(false)
+  subtasksDone  Int?
+  subtasksTotal Int?
+  position      Int        @default(0)
+  createdAt     DateTime   @default(now())
+
+  @@index([academyId])
+  @@index([columnId])
+}
+
+// ----------------------------------------------------------------------------
+// AI assistant
+// ----------------------------------------------------------------------------
+
+model AiConversation {
+  id            String      @id @default(cuid())
+  academyId     String
+  academy       Academy     @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  teacherId     String
+  teacher       Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  cohortId      String?
+  cohort        Cohort?     @relation(fields: [cohortId], references: [id])
+  name          Json // mixed
+  preview       Json? // curated AI-summary snippet shown in the conversation list (distinct from last message)
+  isAll         Boolean     @default(false)
+  pinned        Boolean     @default(false)
+  color         String?
+  createdAt     DateTime    @default(now())
+  lastMessageAt DateTime?
+
+  messages AiMessage[]
+
+  @@index([teacherId])
+}
+
+model AiMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  conversation   AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String // user | ai
+  text           String
+  tokens         Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  @@index([conversationId])
+}
+
+// ----------------------------------------------------------------------------
+// Print
+// ----------------------------------------------------------------------------
+
+model Printer {
+  id           String   @id @default(cuid())
+  academyId    String
+  academy      Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  name         Json // mixed
+  location     Json // localized
+  status       String // free | busy | locked
+  capabilities Json? // string[] of capability tags
+  createdAt    DateTime @default(now())
+
+  jobs PrintJob[]
+
+  @@index([academyId])
+}
+
+model PrintJob {
+  id            String       @id @default(cuid())
+  academyId     String
+  academy       Academy      @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  printerId     String
+  printer       Printer      @relation(fields: [printerId], references: [id])
+  teacherId     String
+  teacher       Teacher      @relation(fields: [teacherId], references: [id])
+  libraryFileId String?
+  libraryFile   LibraryFile? @relation(fields: [libraryFileId], references: [id])
+  doc           Json // mixed
+  size          Json? // mixed
+  copies        Int          @default(1)
+  state         String // now | queued
+  progress      Int          @default(0)
+  createdAt     DateTime     @default(now())
+
+  @@index([printerId])
+  @@index([academyId])
+}
+
+model LibraryFile {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id])
+  filename  String
+  sizeBytes Int      @default(0)
+  createdAt DateTime @default(now())
+
+  printJobs PrintJob[]
+
+  @@index([academyId])
+}
+
+// ----------------------------------------------------------------------------
+// Surveys
+// ----------------------------------------------------------------------------
+
+model Survey {
+  id            String   @id @default(cuid())
+  academyId     String
+  academy       Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  title         Json // localized
+  issuer        Json // localized
+  questions     Int      @default(0)
+  estimateLabel Json? // localized
+  deadlineAt    DateTime?
+  urgent        Boolean  @default(false)
+  anonymous     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  responses SurveyResponse[]
+
+  @@index([academyId])
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  teacherId   String
+  teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  status      String // submitted | skipped
+  rating      Int?
+  comment     String?
+  progress    Int      @default(0)
+  submittedAt DateTime @default(now())
+
+  @@unique([surveyId, teacherId])
+  @@index([teacherId])
+}
+
+// ----------------------------------------------------------------------------
+// Management messaging
+// ----------------------------------------------------------------------------
+
+model MgmtThread {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  name      Json // mixed
+  role      Json? // localized
+  channel   Boolean  @default(false)
+  lead      Boolean  @default(false)
+  pinned    Boolean  @default(false)
+  online    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  messages MgmtMessage[]
+
+  @@index([teacherId])
+}
+
+model MgmtMessage {
+  id              String     @id @default(cuid())
+  threadId        String
+  thread          MgmtThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  dir             String // in | out | card
+  text            Json? // mixed (seed localized; user input plain)
+  read            Boolean    @default(false)
+  taskCardEyebrow Json?
+  taskCardTitle   Json?
+  taskCardTaskId  String?
+  createdAt       DateTime   @default(now())
+
+  @@index([threadId])
+}
+
+// ----------------------------------------------------------------------------
+// Notifications
+// ----------------------------------------------------------------------------
+
+model Notification {
+  id          String   @id @default(cuid())
+  academyId   String
+  academy     Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   Teacher  @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  tone        String // ai | primary | accent | success | warn | neutral
+  icon        String?
+  title       Json // localized
+  body        Json // localized
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([recipientId])
+}
+
+// ----------------------------------------------------------------------------
+// Materials
+// ----------------------------------------------------------------------------
+
+model Material {
+  id        String   @id @default(cuid())
+  academyId String
+  academy   Academy  @relation(fields: [academyId], references: [id], onDelete: Cascade)
+  ownerId   String
+  owner     Teacher  @relation(fields: [ownerId], references: [id])
+  kind      String // pdf | video | doc
+  title     Json // mixed
+  meta      Json? // mixed (size / pages / duration)
+  sizeBytes Int      @default(0)
+  views     Int      @default(0)
+  aiSummary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([academyId])
+}

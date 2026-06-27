@@ -12,4 +12,20 @@ export class CohortService {
   getRoster(cohortId) {
     return this.cohortRepo.getRoster(cohortId);
   }
+  /**
+   * Persist a new cohort/group.
+   * @param {{ name:string, level?:string, room?:string, color?:string, lessonsPerWeek?:number, subjectId?:string }} draft
+   * @returns {Promise<object>} the created cohort
+   */
+  create(draft) {
+    return this.cohortRepo.create(draft);
+  }
+  /**
+   * Persist an attendance roll-call for a cohort.
+   * @param {string} cohortId
+   * @param {Array<{ studentId:string, present:boolean }>} entries
+   */
+  saveAttendance(cohortId, entries) {
+    return this.cohortRepo.saveAttendance(cohortId, entries);
+  }
 }

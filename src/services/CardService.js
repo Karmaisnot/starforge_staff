@@ -20,4 +20,12 @@ export class CardService {
       all: types,
     };
   }
+  /**
+   * Persist a newly issued card.
+   * @param {{ typeName:string, kind:string, recipient:string, reason?:string }} input
+   * @returns {Promise<object>} the created card
+   */
+  issue(input) {
+    return this.cardRepo.issue(input);
+  }
 }

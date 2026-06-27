@@ -3,36 +3,81 @@ import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Button, FilterChip, Icon } from '@/ui';
 import { notificationToneStyle } from '@/domain/models/notification.js';
-import { useNotificationsPage } from '@/hooks/data.js';
+import { useAsync } from '@/hooks/useAsync.js';
+import { useServices } from '@/hooks/useServices.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './notifications.module.css';
 
 export function NotificationsPage() {
+  const { notifications } = useServices();
   const toast = useToast();
-  const { t } = useT();
+  const { t, locale } = useT();
   const [filter, setFilter] = useState('all');
+  // Optimistic read-state scratch, keyed by the backend item id. The server is
+  // the source of truth (`it.read`); a refetch after a successful write clears
+  // the need for this overlay, but we keep entries until then so the dimming
+  // never flickers off mid-reconcile.
   const [read, setRead] = useState({});
-  const state = useNotificationsPage();
+  // Bumping this re-runs the loaders so the server truth (unread counts +
+  // per-row read flags) reconciles after a mark-read write.
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = () => setReloadKey((k) => k + 1);
 
-  // Single source of truth for a row's stable read-state key. Per-row dim and
-  // mark-all MUST derive the key identically, so both go through this helper.
-  const rowKey = (groupLabel, item) => `${groupLabel}-${item.title}-${item.time}`;
+  const state = useAsync(
+    () =>
+      Promise.all([notifications.getGroups(), notifications.getFilters()]).then(
+        ([groups, filters]) => ({ groups, filters }),
+      ),
+    [locale, reloadKey],
+  );
 
-  const markRead = (key) => {
-    setRead((r) => ({ ...r, [key]: true }));
+  // A row is dimmed if the server already flagged it read, or we optimistically
+  // marked it so this session.
+  const isRowRead = (item) => Boolean(item.read) || Boolean(read[item.id]);
+
+  const markRead = (id) => {
+    // (a) optimistic local update — instant visual dim.
+    setRead((r) => ({ ...r, [id]: true }));
     toast(t('notifications.markedRead'));
+    // (b) persist, (c) reconcile from server, (d) roll back + surface on failure.
+    (async () => {
+      try {
+        await notifications.markRead(id);
+        refetch();
+      } catch {
+        setRead((r) => {
+          const next = { ...r };
+          delete next[id];
+          return next;
+        });
+        toast(t('common.error'), 'error');
+      }
+    })();
   };
 
   const markAllRead = (groups) => {
+    // (a) optimistic: dim every currently-rendered row.
+    const ids = groups.flatMap((g) => g.items.map((it) => it.id));
     setRead((r) => {
       const next = { ...r };
-      for (const g of groups) {
-        for (const it of g.items) next[rowKey(g.label, it)] = true;
-      }
+      for (const id of ids) next[id] = true;
       return next;
     });
     toast(t('notifications.allRead'));
+    (async () => {
+      try {
+        await notifications.markAllRead();
+        refetch();
+      } catch {
+        setRead((r) => {
+          const next = { ...r };
+          for (const id of ids) delete next[id];
+          return next;
+        });
+        toast(t('common.error'), 'error');
+      }
+    })();
   };
 
   return (
@@ -71,18 +116,16 @@ export function NotificationsPage() {
                     .filter((it) => filter === 'all' || matchesFilter(it, filter))
                     .map((it) => {
                       const c = notificationToneStyle(it.tone);
-                      // Stable key from resolved content, not the post-filter
-                      // index — otherwise read-state mislabels rows when the
-                      // active filter changes the list order/length. Derived via
-                      // rowKey so per-row and mark-all stay perfectly in sync.
-                      const key = rowKey(g.label, it);
-                      const isRead = read[key];
+                      // Stable key from the backend item id — survives filter
+                      // changes and is also the id we persist read-state under,
+                      // so per-row and mark-all stay perfectly in sync.
+                      const isRead = isRowRead(it);
                       return (
                         <button
-                          key={key}
+                          key={it.id}
                           className={styles.row}
                           style={{ opacity: isRead ? 0.5 : 1 }}
-                          onClick={() => markRead(key)}
+                          onClick={() => markRead(it.id)}
                         >
                           <div className={styles.icon} style={{ background: c.bg, color: c.fg, borderColor: c.border }}>
                             {it.icon === 'AI' ? (

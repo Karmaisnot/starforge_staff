@@ -417,9 +417,12 @@ export function TasksPage() {
   const [overrides, setOverrides] = useState({});
   const [added, setAdded] = useState([]);
   const [modal, setModal] = useState(null); // null | { presetState }
+  // Bumping this re-runs the loaders so the server truth reconciles after a write.
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = () => setReloadKey((k) => k + 1);
 
-  const listState = useAsync(() => taskService.getList(), [locale]);
-  const filtersState = useAsync(() => taskService.getFilters(), [locale]);
+  const listState = useAsync(() => taskService.getList(), [locale, reloadKey]);
+  const filtersState = useAsync(() => taskService.getFilters(), [locale, reloadKey]);
 
   const baseTasks = useMemo(
     () => [...added, ...(listState.data?.tasks ?? [])],
@@ -438,18 +441,59 @@ export function TasksPage() {
       .filter((t) => !priorityFilter || t.priority === priorityFilter);
   }, [baseTasks, overrides, filter, projectFilter, priorityFilter]);
 
-  // Click cycles a task through the workflow states — a real, persisted-feeling action.
-  const cycle = (task) => {
+  // Click cycles a task through the workflow states — optimistic locally, then persisted.
+  const cycle = async (task) => {
     const order = ['todo', 'doing', 'review', 'done'];
-    const next = order[(order.indexOf(task.state) + 1) % order.length];
+    const prev = task.state;
+    const next = order[(order.indexOf(prev) + 1) % order.length];
     setOverrides((o) => ({ ...o, [task.id]: next }));
-    taskService.setState(task.id, next);
     toast(`“${String(task.title).slice(0, 22)}…” → ${next}`);
+    try {
+      await taskService.setState(task.id, next);
+      // Server truth now reflects the move; drop the scratch override and reload
+      // so the board state AND the filter-chip counts reconcile.
+      setOverrides((o) => {
+        // eslint-disable-next-line no-unused-vars
+        const { [task.id]: _drop, ...rest } = o;
+        return rest;
+      });
+      refetch();
+    } catch {
+      // Roll the optimistic move back and surface the failure.
+      setOverrides((o) => ({ ...o, [task.id]: prev }));
+      toast(t('common.error'), 'danger');
+    }
   };
 
-  const createTask = (draft) => {
-    setAdded((list) => [{ id: `new-${Date.now()}`, urgent: false, fromMgmt: false, subtasks: null, assigner: t('common.me'), mine: true, projectColor: 'var(--sf-primary)', ...draft }, ...list]);
+  const createTask = async (draft) => {
+    // Optimistic insert so the UI reacts instantly. `draft` carries the modal's
+    // chosen column (`state`); the backend always creates in `todo`, so we move
+    // it afterwards if a non-todo lane was picked.
+    const tempId = `new-${Date.now()}`;
+    setAdded((list) => [
+      { id: tempId, urgent: false, fromMgmt: false, subtasks: null, assigner: t('common.me'), mine: true, projectColor: 'var(--sf-primary)', ...draft },
+      ...list,
+    ]);
     toast(`+ ${draft.title}`, 'success');
+    try {
+      const created = await taskService.create({
+        title: draft.title,
+        priority: draft.priority,
+        ...(draft.deadline && draft.deadline !== '—' ? { deadlineLabel: draft.deadline } : {}),
+      });
+      // If the modal targeted a non-todo column, move the just-created task there.
+      if (created?.id != null && draft.state && draft.state !== 'todo') {
+        await taskService.setState(created.id, draft.state);
+      }
+      // Reload so the persisted task (with its real id) replaces our scratch row,
+      // and the filter-chip counts update. Clear the optimistic insert it now covers.
+      setAdded((list) => list.filter((x) => x.id !== tempId));
+      refetch();
+    } catch {
+      // Drop the optimistic row and surface the failure.
+      setAdded((list) => list.filter((x) => x.id !== tempId));
+      toast(t('common.error'), 'danger');
+    }
   };
 
   // Cycle the priority filter P1 → P2 → P3 → off.

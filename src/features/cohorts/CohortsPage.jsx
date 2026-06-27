@@ -5,6 +5,7 @@ import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { AiBadge, Avatar, Button, Card, Chip, Icon, Modal, StarMark } from '@/ui';
 import { attendanceTone } from '@/domain/models/cohort.js';
 import { useCohorts, useRoster } from '@/hooks/data.js';
+import { useServices } from '@/hooks/useServices.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
@@ -73,7 +74,10 @@ function AttendanceModal({ open, onClose, cohort, onSave }) {
     const total = list.length;
     // Guard empty roster: keep current attendance by passing null percent.
     const percent = total === 0 ? null : Math.round((presentCount / total) * 100);
-    onSave?.(cohort?.id, percent, presentCount, total);
+    // Build real persistence entries from the roster rows using the actual
+    // student ids, mirroring the toggle state shown in the modal.
+    const entries = list.map((s) => ({ studentId: s.id, present: present[s.id] !== false }));
+    onSave?.(cohort?.id, percent, presentCount, total, entries);
     onClose();
   };
   return (
@@ -235,8 +239,17 @@ function Roster({ cohortId }) {
 }
 
 export function CohortsPage() {
+  // `reloadKey` remounts the data-bearing view, which re-runs its useCohorts /
+  // useRoster loaders against the API so server truth reconciles after a write.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reload = () => setReloadKey((k) => k + 1);
+  return <CohortsView key={reloadKey} reload={reload} />;
+}
+
+function CohortsView({ reload }) {
   const [selectedId, setSelectedId] = useState(null);
   const state = useCohorts();
+  const { cohorts: cohortService } = useServices();
   const toast = useToast();
   const navigate = useNavigate();
   const { t, locale } = useT();
@@ -248,14 +261,35 @@ export function CohortsPage() {
   const [attendanceOverrides, setAttendanceOverrides] = useState({});
   const rosterRef = useRef(null);
 
-  const saveAttendance = (cohortId, percent, present, total) => {
+  const saveAttendance = async (cohortId, percent, present, total, entries) => {
     if (cohortId == null || percent == null) return;
+    // Optimistic: show the new percent immediately (e2e checks this).
     setAttendanceOverrides((m) => ({ ...m, [cohortId]: percent }));
     toast(`${t('cohorts.attendanceSaved')} · ${present}/${total}`, 'success');
+    try {
+      await cohortService.saveAttendance(cohortId, entries ?? []);
+      // Server truth now covers this percent — drop the scratch override and
+      // refetch so the roster/attendance view reconciles.
+      setAttendanceOverrides((m) => {
+        const next = { ...m };
+        delete next[cohortId];
+        return next;
+      });
+      reload();
+    } catch {
+      // Roll back the optimistic override and surface the failure.
+      setAttendanceOverrides((m) => {
+        const next = { ...m };
+        delete next[cohortId];
+        return next;
+      });
+      toast(t('common.error'), 'danger');
+    }
   };
 
-  const createGroup = (draft) => {
+  const createGroup = async (draft) => {
     const id = `g-${Date.now()}`;
+    // Optimistic: insert the new group immediately (e2e checks this).
     setAdded((list) => [
       { id, color: 'var(--sf-primary)', studentCount: 0, attendance: 100, up: 0, down: 0, next: '—', ...draft },
       ...list,
@@ -263,6 +297,19 @@ export function CohortsPage() {
     setLevelFilter(null);
     setSelectedId(id);
     toast(`+ ${draft.name}`, 'success');
+    try {
+      const created = await cohortService.create(draft);
+      // Server truth now includes this group — clear the local scratch row and
+      // refetch so the persisted record (with its real id) takes over.
+      setAdded((list) => list.filter((c) => c.id !== id));
+      if (created?.id != null) setSelectedId(created.id);
+      reload();
+    } catch {
+      // Roll back the optimistic insert and surface the failure.
+      setAdded((list) => list.filter((c) => c.id !== id));
+      setSelectedId(null);
+      toast(t('common.error'), 'danger');
+    }
   };
 
   return (

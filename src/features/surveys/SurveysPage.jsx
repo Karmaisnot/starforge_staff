@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Button, Card, Chip, Icon, Modal, ProgressBar, Segmented } from '@/ui';
-import { useSurveysPage } from '@/hooks/data.js';
+import { useServices } from '@/hooks/useServices.js';
+import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
@@ -56,13 +57,25 @@ function SurveyModal({ survey, onClose, onSubmit }) {
 export function SurveysPage() {
   const toast = useToast();
   const { t, locale } = useT();
-  const state = useSurveysPage();
+  const { surveys } = useServices();
+  const [reloadKey, setReloadKey] = useState(0);
+  const state = useAsync(
+    () =>
+      Promise.all([surveys.getActive(), surveys.getHistory()]).then(([active, history]) => ({
+        active,
+        history,
+      })),
+    [locale, reloadKey],
+  );
+  // Pull fresh server truth; on success this clears the optimistic scratch state.
+  const refetch = () => setReloadKey((k) => k + 1);
   const [open, setOpen] = useState(null);
   const [viewing, setViewing] = useState(null); // history item shown in read-only results modal
-  const [done, setDone] = useState([]); // completed survey ids
+  const [done, setDone] = useState([]); // optimistically-removed active survey ids
   const [extraHistory, setExtraHistory] = useState([]);
 
-  const submit = (survey, answers) => {
+  const submit = async (survey, answers) => {
+    // (a) optimistic local update — instant UI reaction
     setDone((ids) => [...ids, survey.id]);
     setExtraHistory((h) => [
       { title: survey.title, issuer: survey.issuer, status: t('surveys.submitted'), date: t('surveys.now'), skipped: false, rating: answers.rating, comment: answers.comment },
@@ -70,6 +83,40 @@ export function SurveysPage() {
     ]);
     setOpen(null);
     toast(`${survey.title} · ${answers.rating}/5`, 'success');
+    // (b) persist + (c) reconcile with server truth
+    try {
+      await surveys.submit(survey.id, { rating: Number(answers.rating), comment: answers.comment });
+      setDone([]);
+      setExtraHistory([]);
+      refetch();
+    } catch {
+      // (d) roll back the optimistic change and surface the error
+      setDone((ids) => ids.filter((id) => id !== survey.id));
+      setExtraHistory((h) => h.filter((row) => !(row.title === survey.title && row.date === t('surveys.now'))));
+      toast(t('common.error'), 'danger');
+    }
+  };
+
+  const skip = async (survey) => {
+    // (a) optimistic local update
+    setDone((ids) => [...ids, survey.id]);
+    setExtraHistory((h) => [
+      { title: survey.title, issuer: survey.issuer, status: t('surveys.skipped'), date: t('surveys.now'), skipped: true, rating: null, comment: null },
+      ...h,
+    ]);
+    toast(`${survey.title} · ${t('surveys.skipped')}`);
+    // (b) persist + (c) reconcile
+    try {
+      await surveys.skip(survey.id);
+      setDone([]);
+      setExtraHistory([]);
+      refetch();
+    } catch {
+      // (d) roll back
+      setDone((ids) => ids.filter((id) => id !== survey.id));
+      setExtraHistory((h) => h.filter((row) => !(row.title === survey.title && row.date === t('surveys.now'))));
+      toast(t('common.error'), 'danger');
+    }
   };
 
   return (
@@ -119,9 +166,14 @@ export function SurveysPage() {
                         </div>
                       )}
                     </div>
-                    <Button variant="ink" icon="arrowR" iconRight iconSize={12} onClick={() => setOpen(s)}>
-                      {s.progress > 0 ? t('surveys.continue') : t('surveys.start')}
-                    </Button>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <Button variant="ghost" icon="x" iconSize={12} onClick={() => skip(s)}>
+                        {t('surveys.skip')}
+                      </Button>
+                      <Button variant="ink" icon="arrowR" iconRight iconSize={12} onClick={() => setOpen(s)}>
+                        {s.progress > 0 ? t('surveys.continue') : t('surveys.start')}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

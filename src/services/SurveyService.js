@@ -9,4 +9,12 @@ export class SurveyService {
   getHistory() {
     return this.surveyRepo.listHistory();
   }
+  /** @param {string} surveyId @param {{rating:number,comment?:string}} input */
+  submit(surveyId, input) {
+    return this.surveyRepo.submit(surveyId, input);
+  }
+  /** @param {string} surveyId */
+  skip(surveyId) {
+    return this.surveyRepo.skip(surveyId);
+  }
 }

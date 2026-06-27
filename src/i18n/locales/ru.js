@@ -202,6 +202,8 @@ export default {
     question: 'вопросов',
     start: 'Начать',
     continue: 'Продолжить',
+    skip: 'Пропустить',
+    skipped: 'Пропущено',
     historyTitle: 'История · 3',
     submit: "Отправить",
     rateQ: "Насколько это было полезно?",

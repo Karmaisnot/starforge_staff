@@ -1,0 +1,24 @@
+# StarForge EDU backend — local infrastructure.
+#   Start Postgres:  docker compose up -d db
+#   Then from server/:  npm run prisma:migrate && npm run db:seed && npm run dev
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: starforge-edu-db
+    environment:
+      POSTGRES_USER: starforge
+      POSTGRES_PASSWORD: starforge
+      POSTGRES_DB: starforge_edu
+    ports:
+      - '5433:5432'
+    volumes:
+      - starforge-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U starforge -d starforge_edu']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  starforge-pgdata:

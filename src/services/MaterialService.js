@@ -12,4 +12,12 @@ export class MaterialService {
   getStorage() {
     return this.materialRepo.getStorage();
   }
+  /** @param {{title:string, kind:string, sizeBytes?:number, meta?:string}} input @returns {Promise<object>} created material */
+  create(input) {
+    return this.materialRepo.create(input);
+  }
+  /** @param {string} id @returns {Promise<unknown>} */
+  remove(id) {
+    return this.materialRepo.remove(id);
+  }
 }

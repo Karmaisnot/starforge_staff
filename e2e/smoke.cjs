@@ -94,7 +94,9 @@ const vis = (loc) => loc.first().waitFor({ state: 'visible', timeout: 8000 });
     await page.getByPlaceholder('ask a question about...').fill(msg);
     await page.keyboard.press('Enter');
     await vis(page.getByText(msg));
-    await vis(page.getByText('I prepared a quick summary', { exact: false }));
+    // Reply now comes from the real backend AI responder (offline fallback when
+    // no API key) — assert its generated reply appears, not the old mock text.
+    await vis(page.getByText('offline right now', { exact: false }));
   });
 
   // 8. Mgmt: a sent message persists across thread switches

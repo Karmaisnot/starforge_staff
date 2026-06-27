@@ -3,16 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Avatar, Button, Card, Chip, Icon, Modal, StarMark } from '@/ui';
-import { useMgmtThreads, useMgmtTranscript } from '@/hooks/data.js';
+import { useServices } from '@/hooks/useServices.js';
+import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './mgmt.module.css';
 
-function ChatPanel({ thread, sent, onSend }) {
+function ChatPanel({ thread, sent, onSend, transcriptReloadKey }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const { t: tt } = useT();
-  const { data: transcript } = useMgmtTranscript(thread.id);
+  const { t: tt, locale } = useT();
+  const { mgmt } = useServices();
+  // Direct service+useAsync (mirrors TasksPage) so the parent can force a
+  // transcript refetch by bumping transcriptReloadKey after a persisted send.
+  const { data: transcript } = useAsync(
+    () => mgmt.getTranscript(thread.id),
+    [thread.id, locale, transcriptReloadKey],
+  );
   const [draft, setDraft] = useState('');
   const fileRef = useRef(null);
 
@@ -177,29 +184,101 @@ function ComposeModal({ open, onClose, onCreate }) {
 
 export function MgmtPage() {
   const toast = useToast();
-  const { t: tt } = useT();
+  const { t: tt, locale } = useT();
+  const { mgmt } = useServices();
   const [openId, setOpenId] = useState(1);
   const [extraThreads, setExtraThreads] = useState([]);
   // Messages sent this session, kept per-thread so switching conversations and
   // coming back preserves them (and a newly composed thread shows its first line).
   const [sentByThread, setSentByThread] = useState({});
   const [composeOpen, setComposeOpen] = useState(false);
-  const state = useMgmtThreads();
+  // Bumping these forces useAsync to re-run after a persisted mutation so the
+  // server truth (transcript / thread preview / unread counts) reconciles.
+  const [threadsReloadKey, setThreadsReloadKey] = useState(0);
+  const [transcriptReloadKey, setTranscriptReloadKey] = useState(0);
+  // Direct service+useAsync (mirrors TasksPage) instead of useMgmtThreads so we
+  // own a refetch handle via threadsReloadKey while keeping identical behavior.
+  const state = useAsync(() => mgmt.getThreads(), [locale, threadsReloadKey]);
 
-  const sendMessage = (threadId, text) =>
+  const reloadThreads = () => setThreadsReloadKey((k) => k + 1);
+  const reloadTranscript = () => setTranscriptReloadKey((k) => k + 1);
+
+  const sendMessage = async (threadId, text) => {
+    // Optimistic: show the outgoing bubble instantly (e2e checks this).
     setSentByThread((s) => ({ ...s, [threadId]: [...(s[threadId] ?? []), text] }));
+    try {
+      await mgmt.sendMessage(threadId, text);
+      // Server now holds the message: refetch transcript (it renders the real
+      // bubble) and threads (preview/unread update), then drop the scratch copy
+      // for this thread so it isn't duplicated alongside the refetched message.
+      reloadTranscript();
+      reloadThreads();
+      setSentByThread((s) => {
+        const next = { ...s };
+        delete next[threadId];
+        return next;
+      });
+    } catch {
+      // Roll back the optimistic bubble and surface the failure.
+      setSentByThread((s) => {
+        const arr = s[threadId] ?? [];
+        const idx = arr.lastIndexOf(text);
+        if (idx === -1) return s;
+        const trimmed = [...arr.slice(0, idx), ...arr.slice(idx + 1)];
+        return { ...s, [threadId]: trimmed };
+      });
+      toast(tt('common.error'), 'danger');
+    }
+  };
 
-  const createThread = ({ name, message }) => {
-    const id = `t-${Date.now()}`;
+  const createThread = async ({ name, message }) => {
+    const tempId = `t-${Date.now()}`;
+    // Optimistic: show the new thread + its first line immediately.
     setExtraThreads((list) => [
-      { id, name, role: tt('mgmt.newThreadRole'), lastMessage: message, time: tt('mgmt.now'), unread: 0, online: false },
+      { id: tempId, name, role: tt('mgmt.newThreadRole'), lastMessage: message, time: tt('mgmt.now'), unread: 0, online: false },
       ...list,
     ]);
     // Seed the new conversation with the typed message so it actually appears
     // in the chat instead of being thrown away as a preview-only string.
-    setSentByThread((s) => ({ ...s, [id]: [message] }));
-    setOpenId(id);
+    setSentByThread((s) => ({ ...s, [tempId]: [message] }));
+    setOpenId(tempId);
     toast(tt('mgmt.sent'), 'success');
+    try {
+      const created = await mgmt.createThread({ name, message });
+      // Server now owns the thread: refetch the list and switch the open id /
+      // scratch message over to the real id, dropping the optimistic temp copy.
+      reloadThreads();
+      const realId = created?.id;
+      setExtraThreads((list) => list.filter((t) => t.id !== tempId));
+      setSentByThread((s) => {
+        const next = { ...s };
+        delete next[tempId];
+        return next;
+      });
+      if (realId != null) setOpenId(realId);
+    } catch {
+      // Roll back the optimistic thread + seeded message and report failure.
+      setExtraThreads((list) => list.filter((t) => t.id !== tempId));
+      setSentByThread((s) => {
+        const next = { ...s };
+        delete next[tempId];
+        return next;
+      });
+      toast(tt('common.error'), 'danger');
+    }
+  };
+
+  // Opening a thread clears its unread badge server-side, then refetches threads.
+  const openThread = async (threadId) => {
+    setOpenId(threadId);
+    // Only persist for real (server) threads; temp optimistic ids have no row.
+    if (typeof threadId === 'string' && threadId.startsWith('t-')) return;
+    try {
+      await mgmt.markRead(threadId);
+      reloadThreads();
+    } catch {
+      // Non-fatal: leave the unread badge as-is rather than crash the page.
+    }
   };
 
   return (
@@ -225,7 +304,7 @@ export function MgmtPage() {
                   <button
                     key={t.id}
                     className={`${styles.thread} ${openId === t.id ? styles.on : ''}`}
-                    onClick={() => setOpenId(t.id)}
+                    onClick={() => openThread(t.id)}
                   >
                     <div style={{ position: 'relative' }}>
                       {t.channel ? (
@@ -261,6 +340,7 @@ export function MgmtPage() {
                 thread={cur}
                 sent={sentByThread[cur.id] ?? []}
                 onSend={(text) => sendMessage(cur.id, text)}
+                transcriptReloadKey={transcriptReloadKey}
               />
             </div>
 

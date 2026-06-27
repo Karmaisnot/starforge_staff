@@ -1,5 +1,6 @@
 // Composition root — the ONLY module that names concrete repositories.
-// Flip USE_MOCK (or set VITE_USE_MOCK=false) once real Http* adapters exist.
+// VITE_USE_MOCK=false selects the real Http* adapters (the Fastify backend);
+// anything else keeps the in-memory mocks. Flipping is a one-flag change here.
 import {
   MockAccountRepository,
   MockCohortRepository,
@@ -13,6 +14,20 @@ import {
   MockNotificationRepository,
   MockMaterialRepository,
 } from '@/data/repositories/mock/index.js';
+import {
+  HttpAccountRepository,
+  HttpCohortRepository,
+  HttpCardRepository,
+  HttpTaskRepository,
+  HttpDashboardRepository,
+  HttpAiRepository,
+  HttpPrintRepository,
+  HttpSurveyRepository,
+  HttpMgmtRepository,
+  HttpNotificationRepository,
+  HttpMaterialRepository,
+  HttpNavigationRepository,
+} from '@/data/repositories/http/index.js';
 
 import { AccountService } from './AccountService.js';
 import { CohortService } from './CohortService.js';
@@ -43,10 +58,23 @@ function buildRepositories() {
       mgmtRepo: new MockMgmtRepository(),
       notificationRepo: new MockNotificationRepository(),
       materialRepo: new MockMaterialRepository(),
+      navRepo: null, // mock mode: NavigationService falls back to the fixture
     };
   }
-  // When a backend lands: return Http* adapters here (e.g. new HttpCohortRepository()).
-  throw new Error('HTTP repositories are not wired yet — set VITE_USE_MOCK=true.');
+  return {
+    accountRepo: new HttpAccountRepository(),
+    cohortRepo: new HttpCohortRepository(),
+    cardRepo: new HttpCardRepository(),
+    taskRepo: new HttpTaskRepository(),
+    dashboardRepo: new HttpDashboardRepository(),
+    aiRepo: new HttpAiRepository(),
+    printRepo: new HttpPrintRepository(),
+    surveyRepo: new HttpSurveyRepository(),
+    mgmtRepo: new HttpMgmtRepository(),
+    notificationRepo: new HttpNotificationRepository(),
+    materialRepo: new HttpMaterialRepository(),
+    navRepo: new HttpNavigationRepository(),
+  };
 }
 
 /** Build the service registry. Exposed as a factory so tests can inject fakes. */
@@ -64,7 +92,7 @@ export function createContainer() {
     mgmt: new MgmtService(repos),
     notifications: new NotificationService(repos),
     materials: new MaterialService(repos),
-    navigation: new NavigationService(),
+    navigation: new NavigationService(repos.navRepo),
   };
 }
 
