@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
-import { Button, Card, Modal, Segmented, Stat, StarMark } from '@/ui';
+import { Button, Card, Icon, Modal, Segmented, Stat, StarMark } from '@/ui';
 import { useServices } from '@/hooks/useServices.js';
 import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { useTeacher } from '@/hooks/data.js';
 import styles from './cards.module.css';
 
-function GiveCardModal({ open, onClose, types, onIssue, preset }) {
+function GiveCardModal({ open, onClose, types, onIssue, preset, recipients }) {
   const toast = useToast();
   const { t: tr } = useT();
   const [kind, setKind] = useState('up');
@@ -45,10 +46,16 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
       toast(tr('cards.needName'), 'danger');
       return;
     }
+    const selected = preset?.cohortId
+      ? recipients.find((student) => String(student.id) === recipient)
+      : null;
     onIssue({
       kind,
       typeName: type || kindTypes[0]?.name || '',
-      recipient: recipient.trim(),
+      recipient: selected?.name ?? recipient.trim(),
+      studentId: selected?.id,
+      cohortId: preset?.cohortId,
+      cohortName: preset?.cohortName,
       reason: reason.trim(),
     });
     close();
@@ -103,12 +110,28 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
         </label>
         <label className={styles.field}>
           <span>{tr('cards.fStudent')}</span>
-          <input
-            className={styles.inputCtl}
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            placeholder={tr('cards.fStudentPh')}
-          />
+          {preset?.cohortId ? (
+            <select
+              className={styles.select}
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              required
+            >
+              <option value="">{tr('cards.fStudentPh')}</option>
+              {recipients.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className={styles.inputCtl}
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+              placeholder={tr('cards.fStudentPh')}
+            />
+          )}
         </label>
         <label className={styles.field}>
           <span>{tr('cards.fReason')}</span>
@@ -124,12 +147,82 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
   );
 }
 
+function SecurityScanner({ onScan }) {
+  const { t } = useT();
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    const clean = code.trim();
+    if (!clean || busy) return;
+    setBusy(true);
+    try {
+      const next = await onScan(clean);
+      setResult(next);
+      setCode('');
+    } catch (error) {
+      setResult({ valid: false, error: error?.message || t('common.errorBody') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className={styles.scanner} aria-labelledby="card-scanner-title">
+      <div className={styles.scannerIntro}>
+        <span><Icon name="shield" size={21} /></span>
+        <div>
+          <small>{t('cards.securityDesk')}</small>
+          <h2 id="card-scanner-title">{t('cards.scanTitle')}</h2>
+          <p>{t('cards.scanBody')}</p>
+        </div>
+      </div>
+      <form onSubmit={submit} className={styles.scannerForm}>
+        <label>
+          <span>{t('cards.scanCode')}</span>
+          <input
+            autoFocus
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            placeholder={t('cards.scanPlaceholder')}
+            autoComplete="off"
+          />
+        </label>
+        <Button type="submit" variant="primary" icon="arrowR" disabled={!code.trim() || busy}>
+          {busy ? t('cards.scanning') : t('cards.checkIn')}
+        </Button>
+      </form>
+      <div className={styles.scanResult} data-state={result ? (result.valid ? 'valid' : 'invalid') : 'idle'}>
+        <Icon name={!result ? 'brand' : result.valid ? 'check' : 'x'} size={20} />
+        <div>
+          <strong>
+            {!result
+              ? t('cards.readyToScan')
+              : result.valid
+                ? t('cards.accessGranted')
+                : t('cards.accessDenied')}
+          </strong>
+          <p>
+            {!result
+              ? t('cards.readyBody')
+              : result.error ||
+                `${result.student} · ${result.cardType}${result.attendanceLesson ? ` · ${t('cards.attendanceMarked')}` : ''}`}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function CardsPage() {
-  const { cards: cardService } = useServices();
+  const { cards: cardService, cohorts: cohortService } = useServices();
   const toast = useToast();
   const { t: tr, locale } = useT();
   const navigate = useNavigate();
   const location = useLocation();
+  const profileState = useTeacher();
   // null = closed; an object = open (optionally carrying a preset for the form).
   const [modal, setModal] = useState(null);
   // Cards issued this session, prepended to the loaded recent list (optimistic).
@@ -145,18 +238,27 @@ export function CardsPage() {
       ]).then(([recent, types, stats]) => ({ recent, types, stats })),
     [locale, reloadKey],
   );
+  const rosterState = useAsync(
+    () => (modal?.cohortId ? cohortService.getRoster(modal.cohortId) : Promise.resolve([])),
+    [modal?.cohortId, locale],
+  );
 
-  // Honour a "give a card to <name>" deep-link (from AI focus students / cohorts),
-  // then clear the router state so the modal doesn't re-open on every re-render.
+  // Honour a group-context card action, then clear router state so the modal
+  // does not reopen on every render or browser revisit.
   useEffect(() => {
     const issueTo = location.state?.issueTo;
-    if (issueTo) {
-      setModal({ recipient: issueTo });
+    const openGiveCard = location.state?.openGiveCard;
+    if (issueTo || openGiveCard) {
+      setModal({
+        recipient: issueTo ?? '',
+        cohortId: location.state?.cohortId,
+        cohortName: location.state?.cohortName,
+      });
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [location.pathname, location.state, navigate]);
 
-  const issueCard = async ({ kind, typeName, recipient, reason }) => {
+  const issueCard = async ({ kind, typeName, recipient, studentId, cohortId, cohortName, reason }) => {
     // Optimistic: prepend the card so the recent list reacts instantly.
     const optimisticId = `c-${Date.now()}`;
     setIssued((list) => [
@@ -164,7 +266,7 @@ export function CardsPage() {
         id: optimisticId,
         kind,
         recipient,
-        cohort: '',
+        cohort: cohortName ?? '',
         typeName,
         reason: reason || tr('cards.fReasonPh'),
         when: tr('mgmt.now'),
@@ -176,7 +278,7 @@ export function CardsPage() {
     // Persist, then refetch so server truth (recent + stats + types counts)
     // reconciles. The optimistic prepend is dropped once the refetch covers it.
     try {
-      await cardService.issue({ typeName, kind, recipient, reason });
+      await cardService.issue({ typeName, kind, recipient, studentId, cohortId, reason });
       setIssued((list) => list.filter((c) => c.id !== optimisticId));
       setReloadKey((k) => k + 1);
     } catch {
@@ -205,18 +307,11 @@ export function CardsPage() {
             <PageHeader
               title={tr('cards.title')}
               subtitle={`${totalIssued} ${tr('cards.issuedThisWeek')}`}
-              right={
-                <Button
-                  variant="primary"
-                  icon="plus"
-                  disabled={!hasTypes}
-                  title={!hasTypes ? tr('cards.noTypes') : undefined}
-                  onClick={() => setModal({})}
-                >
-                  {tr('common.giveCard')}
-                </Button>
-              }
             />
+
+            {profileState.data?.roleKey === 'security' && (
+              <SecurityScanner onScan={(code) => cardService.scan(code)} />
+            )}
 
             <div className={styles.statGrid}>
               <Stat
@@ -313,11 +408,9 @@ export function CardsPage() {
                   {d.types.all.map((t) => {
                     const isUp = t.kind === 'up';
                     return (
-                      <button
+                      <div
                         key={t.name}
-                        type="button"
                         className={styles.type}
-                        onClick={() => setModal({ kind: t.kind, type: t.name })}
                       >
                         <div
                           className={styles.miniCard}
@@ -347,7 +440,7 @@ export function CardsPage() {
                           {isUp ? '↑' : '↓'}
                           {t.count}
                         </span>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -359,6 +452,7 @@ export function CardsPage() {
               onClose={() => setModal(null)}
               types={d.types}
               preset={modal}
+              recipients={rosterState.data ?? []}
               onIssue={issueCard}
             />
           </>

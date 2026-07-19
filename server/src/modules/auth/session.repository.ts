@@ -8,8 +8,8 @@ export class SessionRepository {
     return this.db.authSession.create({ data });
   }
 
-  findActive(id: string) {
-    return this.db.authSession.findFirst({ where: { id, revokedAt: null } });
+  findActive(id: string, teacherId: string) {
+    return this.db.authSession.findFirst({ where: { id, teacherId, revokedAt: null } });
   }
 
   touch(id: string) {

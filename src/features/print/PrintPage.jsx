@@ -8,6 +8,7 @@ import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
+import { isApiMode } from '@/data/http/apiConfig.js';
 import styles from './print.module.css';
 
 const PAGES_PER_COPY = 8;
@@ -205,6 +206,7 @@ export function PrintPage() {
   );
   const [extraJobs, setExtraJobs] = useState([]);
   const [cancelled, setCancelled] = useState({});
+  const writesEnabled = !isApiMode();
 
   const cancelJob = async (job) => {
     // Optimistic: drop it from the visible queue immediately.
@@ -275,9 +277,11 @@ export function PrintPage() {
                 title={tt('print.title')}
                 subtitle={`${d.printers.length} ${tt('print.printerCount')} · ${jobs.length} ${tt('print.queueWord')}`}
                 right={
-                  <Button variant="primary" icon="plus" onClick={focusQuick}>
-                    {tt('print.newPrint')}
-                  </Button>
+                  writesEnabled ? (
+                    <Button variant="primary" icon="plus" onClick={focusQuick}>
+                      {tt('print.newPrint')}
+                    </Button>
+                  ) : null
                 }
               />
 
@@ -341,13 +345,15 @@ export function PrintPage() {
                               {j.eta}
                             </div>
                           </div>
-                          <button
-                            className={styles.iconBtn}
-                            onClick={() => cancelJob(j)}
-                            aria-label={tt('print.cancelled')}
-                          >
-                            <Icon name="x" size={16} />
-                          </button>
+                          {writesEnabled && (
+                            <button
+                              className={styles.iconBtn}
+                              onClick={() => cancelJob(j)}
+                              aria-label={tt('print.cancelled')}
+                            >
+                              <Icon name="x" size={16} />
+                            </button>
+                          )}
                         </div>
                       </Card>
                     ))}
@@ -396,7 +402,7 @@ export function PrintPage() {
                           <div className={styles.printerEta}>
                             <Icon name="clock" size={14} style={{ color: p.accent }} />
                             <span style={{ flex: 1 }}>{p.eta}</span>
-                            {p.status !== 'locked' && (
+                            {writesEnabled && p.status !== 'locked' && (
                               <Button
                                 variant="soft"
                                 style={{ padding: '4px 10px', fontSize: 11 }}
@@ -412,9 +418,11 @@ export function PrintPage() {
                   </div>
                 </div>
 
-                <div id="sf-quick-print">
-                  <QuickPrint library={d.library} printers={d.printers} onAdd={addJob} />
-                </div>
+                {writesEnabled && (
+                  <div id="sf-quick-print">
+                    <QuickPrint library={d.library} printers={d.printers} onAdd={addJob} />
+                  </div>
+                )}
               </div>
             </>
           );

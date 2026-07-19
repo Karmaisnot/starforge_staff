@@ -38,4 +38,9 @@ export class AuthService {
   async logout(sessionId: string, teacherId: string): Promise<void> {
     await this.sessions.revoke(sessionId, teacherId);
   }
+
+  async assertSessionActive(sessionId: string, teacherId: string): Promise<void> {
+    const session = await this.sessions.findActive(sessionId, teacherId);
+    if (!session) throw new UnauthorizedError('Your session has ended');
+  }
 }

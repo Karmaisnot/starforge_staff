@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Avatar, Icon, StarMark, AiBadge } from '@/ui';
 import { useT } from '@/hooks/useT.js';
-import { PRIMARY_NAV, SECONDARY_NAV } from './navConfig.js';
+import { PRIMARY_NAV, SECONDARY_NAV, visibleNav } from './navConfig.js';
 import { NavItem } from './NavItem.jsx';
 import styles from './AppShell.module.css';
 
@@ -49,30 +49,32 @@ export function Sidebar({ teacher, badges = {}, aiUsage, open, onClose }) {
         </div>
 
         <div className={styles.sideSection}>{t('shell.primary')}</div>
-        {PRIMARY_NAV.map((item) => (
+        {visibleNav(PRIMARY_NAV, teacher).map((item) => (
           <NavItem key={item.id} item={item} badge={badges[item.badge]} onNavigate={onClose} />
         ))}
 
         <div className={styles.sideSection}>{t('shell.documents')}</div>
-        {SECONDARY_NAV.map((item) => (
+        {visibleNav(SECONDARY_NAV, teacher).map((item) => (
           <NavItem key={item.id} item={item} badge={badges[item.badge]} onNavigate={onClose} />
         ))}
 
-        <div className={styles.sideAi}>
-          <div className={styles.sideAiHead}>
-            <AiBadge compact>{t('shell.limit')}</AiBadge>
-            <span className="sf-mono" style={{ fontSize: 10, color: 'var(--sf-muted)' }}>
-              {pct}%
-            </span>
+        {visibleNav(PRIMARY_NAV, teacher).some((item) => item.id === 'ai') && (
+          <div className={styles.sideAi}>
+            <div className={styles.sideAiHead}>
+              <AiBadge compact>{t('shell.limit')}</AiBadge>
+              <span className="sf-mono" style={{ fontSize: 10, color: 'var(--sf-muted)' }}>
+                {pct}%
+              </span>
+            </div>
+            <div className={styles.sideAiBar}>
+              <div style={{ width: `${pct}%` }} />
+            </div>
+            <div className={`sf-mono ${styles.sideAiMeta}`}>
+              {(aiUsage?.used ?? 0).toLocaleString('ru-RU')} /{' '}
+              {(aiUsage?.limit ?? 0).toLocaleString('ru-RU')} {t('shell.token')}
+            </div>
           </div>
-          <div className={styles.sideAiBar}>
-            <div style={{ width: `${pct}%` }} />
-          </div>
-          <div className={`sf-mono ${styles.sideAiMeta}`}>
-            {(aiUsage?.used ?? 0).toLocaleString('ru-RU')} /{' '}
-            {(aiUsage?.limit ?? 0).toLocaleString('ru-RU')} {t('shell.token')}
-          </div>
-        </div>
+        )}
 
         <button
           className={styles.sideProfile}

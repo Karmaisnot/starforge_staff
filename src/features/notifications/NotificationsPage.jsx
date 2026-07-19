@@ -139,7 +139,7 @@ export function NotificationsPage() {
                                   className="sf-serif"
                                   style={{ fontWeight: 600, fontSize: 14 }}
                                 >
-                                  Ai
+                                  AI
                                 </span>
                               ) : (
                                 <Icon name={it.icon} size={18} />

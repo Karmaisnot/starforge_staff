@@ -38,7 +38,7 @@ export class CohortService {
   }
 
   async getById(ctx: AuthContext, id: string) {
-    const cohort = await this.repo.getById(id, ctx.academyId);
+    const cohort = await this.repo.getById(id, ctx.academyId, ctx.teacherId);
     if (!cohort) return null; // parity with mock getById (returns null)
     const [studentCounts, cardCounts, attendance] = await Promise.all([
       this.repo.studentCountByCohort([id]),
@@ -90,7 +90,7 @@ export class CohortService {
    * The persisted summary is derived from the surviving entries.
    */
   async takeAttendance(ctx: AuthContext, cohortId: string, input: TakeAttendanceInput) {
-    const cohort = await this.repo.getById(cohortId, ctx.academyId);
+    const cohort = await this.repo.getById(cohortId, ctx.academyId, ctx.teacherId);
     if (!cohort) throw new NotFoundError('Cohort');
     if (input.entries.length === 0) {
       throw new BusinessRuleError('Attendance requires at least one student');
@@ -125,6 +125,8 @@ export class CohortService {
   }
 
   async getRoster(ctx: AuthContext, cohortId: string) {
+    const cohort = await this.repo.getById(cohortId, ctx.academyId, ctx.teacherId);
+    if (!cohort) throw new NotFoundError('Cohort');
     const students = await this.repo.getStudents(cohortId, ctx.academyId);
     const ids = students.map((s) => s.id);
     const [cardCounts, attendance] = await Promise.all([

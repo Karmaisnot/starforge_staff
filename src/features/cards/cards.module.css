@@ -115,3 +115,127 @@
   font-size: 13px;
   line-height: 1.5;
 }
+.scanner {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(300px, 1.1fr) minmax(250px, 0.9fr);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--sf-primary) 25%, var(--sf-border));
+  border-radius: 17px;
+  background: linear-gradient(135deg, var(--sf-surface), var(--sf-primary-soft));
+  box-shadow: var(--sf-shadow-sm);
+}
+.scannerIntro {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.scannerIntro > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--sf-primary);
+  background: var(--sf-surface);
+}
+.scannerIntro small {
+  color: var(--sf-muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.scannerIntro h2 {
+  margin: 4px 0;
+  font-size: 14px;
+}
+.scannerIntro p,
+.scanResult p {
+  margin: 0;
+  color: var(--sf-muted);
+  font-size: 8px;
+  line-height: 1.5;
+}
+.scannerForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+.scannerForm label > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--sf-ink-2);
+  font-size: 8px;
+  font-weight: 750;
+}
+.scannerForm input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--sf-border);
+  border-radius: 9px;
+  outline: 0;
+  color: var(--sf-ink);
+  background: var(--sf-surface);
+  font-family: var(--sf-font-mono);
+  font-size: 10px;
+}
+.scannerForm input:focus {
+  border-color: var(--sf-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sf-primary) 14%, transparent);
+}
+.scanResult {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 62px;
+  padding: 12px;
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  color: var(--sf-muted);
+  background: var(--sf-surface);
+}
+.scanResult[data-state='valid'] {
+  border-color: color-mix(in srgb, var(--sf-success) 35%, var(--sf-border));
+  color: var(--sf-success);
+  background: var(--sf-success-soft);
+}
+.scanResult[data-state='invalid'] {
+  border-color: color-mix(in srgb, var(--sf-danger) 35%, var(--sf-border));
+  color: var(--sf-danger);
+  background: var(--sf-danger-soft);
+}
+.scanResult strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--sf-ink);
+  font-size: 9px;
+}
+@media (max-width: 1050px) {
+  .scanner {
+    grid-template-columns: 1fr 1fr;
+  }
+  .scanResult {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .scanner {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .scanResult {
+    grid-column: auto;
+  }
+  .scannerForm {
+    grid-template-columns: 1fr;
+  }
+  .scannerForm button {
+    width: 100%;
+  }
+}

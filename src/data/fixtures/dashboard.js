@@ -28,10 +28,55 @@ export const todayStatsFixture = [
   { value: '94', unit: '%', label: { uz: 'O‘rta davomat', ru: 'Ср. посещаемость', en: 'Avg attendance' }, color: 'var(--sf-success)', trend: { up: true, value: '+2%' } },
   { value: '↑8', label: { uz: 'Up kartalar', ru: 'Up карты', en: 'Up cards' }, color: '#7a4f0e', trend: { up: true, value: { uz: 'bugun', ru: 'сегодня', en: 'today' } } },
   { value: '↓2', label: { uz: 'Down kartalar', ru: 'Down карты', en: 'Down cards' }, color: 'var(--sf-danger)' },
-  { value: '3', label: { uz: 'Vazifa kutmoqda', ru: 'Ожидают задачи', en: 'Tasks pending' }, color: 'var(--sf-primary)' },
+  { value: '3', label: { uz: 'Ochiq vazifalar', ru: 'Открытые задачи', en: 'Open tasks' }, color: 'var(--sf-primary)' },
 ];
 
+// Teacher-owned performance analytics shown on the Today command center.
+// Ten observed teaching days keep the attendance trend honest and readable.
+export const teacherPerformanceFixture = {
+  rank: {
+    position: 4,
+    total: 28,
+    score: 92,
+    change: 2,
+    percentile: { uz: 'Top 15%', ru: 'Топ 15%', en: 'Top 15%' },
+    nextGap: 36,
+  },
+  attendanceTrend: [
+    { label: '06', value: 90 },
+    { label: '07', value: 92 },
+    { label: '08', value: 91 },
+    { label: '09', value: 93 },
+    { label: '12', value: 92 },
+    { label: '13', value: 94 },
+    { label: '14', value: 95 },
+    { label: '15', value: 93 },
+    { label: '18', value: 94 },
+    { label: '19', value: 94 },
+  ],
+  weeklyLoad: [
+    { label: { uz: 'Du', ru: 'Пн', en: 'Mon' }, value: 4 },
+    { label: { uz: 'Se', ru: 'Вт', en: 'Tue' }, value: 5 },
+    { label: { uz: 'Ch', ru: 'Ср', en: 'Wed' }, value: 4 },
+    { label: { uz: 'Pa', ru: 'Чт', en: 'Thu' }, value: 6 },
+    { label: { uz: 'Ju', ru: 'Пт', en: 'Fri' }, value: 3 },
+  ],
+  scoreBreakdown: [
+    { label: { uz: 'Davomat', ru: 'Посещаемость', en: 'Attendance' }, value: 94, target: 90 },
+    { label: { uz: 'Dars yakuni', ru: 'Проведение уроков', en: 'Lesson completion' }, value: 96, target: 95 },
+    { label: { uz: 'Vazifalar vaqtida', ru: 'Задачи вовремя', en: 'Tasks on time' }, value: 88, target: 90 },
+    { label: { uz: 'O‘quvchi rivoji', ru: 'Прогресс учеников', en: 'Student progress' }, value: 91, target: 90 },
+  ],
+  groupHealth: [
+    { name: '9-B Algebra', attendance: 94, up: 18, down: 4 },
+    { name: 'Algebra Mid', attendance: 91, up: 12, down: 3 },
+    { name: '10-V Geometriya', attendance: 89, up: 9, down: 5 },
+  ],
+  updatedAt: { uz: 'Bugun · 09:48', ru: 'Сегодня · 09:48', en: 'Today · 09:48' },
+};
+
 export const heroLessonFixture = {
+  available: true,
   eyebrow: {
     uz: 'Keyingi dars · 14 daqiqada boshlanadi',
     ru: 'Следующий урок · через 14 минут',

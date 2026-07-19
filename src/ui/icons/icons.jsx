@@ -74,6 +74,14 @@ export const ICONS = {
   plus: { stroke: 2.2, children: <path d="M12 5 V19 M5 12 H19" /> },
   arrowR: { children: <path d="M5 12 H19 M14 6 L20 12 L14 18" /> },
   arrowL: { children: <path d="M19 12 H5 M10 6 L4 12 L10 18" /> },
+  refresh: {
+    children: (
+      <>
+        <path d="M20 7 V3 L16 7 H20 A8 8 0 0 0 5 9" />
+        <path d="M4 17 V21 L8 17 H4 A8 8 0 0 0 19 15" />
+      </>
+    ),
+  },
   chevR: { children: <path d="M9 6 L15 12 L9 18" /> },
   chevD: { children: <path d="M6 9 L12 15 L18 9" /> },
   more: {
@@ -105,6 +113,33 @@ export const ICONS = {
     ),
   },
   send: { children: <path d="M4 12 L20 4 L14 20 L12 13 Z" /> },
+  mic: {
+    children: (
+      <>
+        <rect x="8" y="3" width="8" height="13" rx="4" />
+        <path d="M5 11 a7 7 0 0 0 14 0 M12 18 V22 M8 22 H16" />
+      </>
+    ),
+  },
+  image: {
+    children: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2.5" />
+        <circle cx="9" cy="10" r="2" />
+        <path d="M4 18 L9 13 L12 16 L15 12 L20 17" />
+      </>
+    ),
+  },
+  play: { children: <path d="M8 5 L19 12 L8 19 Z" /> },
+  users: {
+    children: (
+      <>
+        <circle cx="9" cy="9" r="3" />
+        <circle cx="17" cy="10" r="2.5" />
+        <path d="M3 20 c0-3 2.5-5 6-5 s6 2 6 5 M15 16 c3 0 5 1.5 5.5 4" />
+      </>
+    ),
+  },
   doc: {
     children: <path d="M6 3 H14 L19 8 V21 H6 Z M14 3 V8 H19 M8 13 H17 M8 17 H14" />,
   },
@@ -146,7 +181,11 @@ export const ICONS = {
       </>
     ),
   },
-  logout: { children: <path d="M9 5 H5 a1 1 0 0 0 -1 1 V18 a1 1 0 0 0 1 1 H9 M15 8 L20 12 L15 16 M20 12 H9" /> },
+  logout: {
+    children: (
+      <path d="M9 5 H5 a1 1 0 0 0 -1 1 V18 a1 1 0 0 0 1 1 H9 M15 8 L20 12 L15 16 M20 12 H9" />
+    ),
+  },
   brand: {
     children: <path d="M12 3 L14 9 L20 10 L15 14 L17 20 L12 17 L7 20 L9 14 L4 10 L10 9 Z" />,
   },

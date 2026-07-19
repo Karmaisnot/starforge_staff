@@ -71,6 +71,10 @@ export class ICardRepository {
   issue(_input) {
     return ni('ICardRepository.issue');
   }
+  /** @param {string} _code scan an access card at the door */
+  scan(_code) {
+    return ni('ICardRepository.scan');
+  }
 }
 
 export class ITaskRepository {
@@ -211,5 +215,76 @@ export class IMaterialRepository {
   /** @param {string} _id */
   remove(_id) {
     return ni('IMaterialRepository.remove');
+  }
+}
+
+export class IWorkRepository {
+  getWorkspace() {
+    return ni('IWorkRepository.getWorkspace');
+  }
+  /** @param {{kind:string,title:string,description?:string,amount?:number|null}} _input */
+  createRequest(_input) {
+    return ni('IWorkRepository.createRequest');
+  }
+  /** @param {string|number} _id */
+  cancelRequest(_id) {
+    return ni('IWorkRepository.cancelRequest');
+  }
+  /** @param {string|number} _id @param {'accepted'|'declined'} _response */
+  respondMeeting(_id, _response) {
+    return ni('IWorkRepository.respondMeeting');
+  }
+  /** @param {string|number} _id */
+  claimCover(_id) {
+    return ni('IWorkRepository.claimCover');
+  }
+  /** @param {{lessonId:string|number,reason?:string}} _input */
+  requestCover(_input) {
+    return ni('IWorkRepository.requestCover');
+  }
+}
+
+export class IFinanceRepository {
+  getWorkspace() {
+    return ni('IFinanceRepository.getWorkspace');
+  }
+  /** @param {{invoiceId:string|number,amount:number}} _input */
+  collectCash(_input) {
+    return ni('IFinanceRepository.collectCash');
+  }
+}
+
+export class IPeopleRepository {
+  getDirectory() {
+    return ni('IPeopleRepository.getDirectory');
+  }
+}
+
+export class IAcademicRepository {
+  /** Role-scoped academic workspace assembled from the backend's domain modules. */
+  getWorkspace() {
+    return ni('IAcademicRepository.getWorkspace');
+  }
+  /** @param {string|number} _assignmentId */
+  publishAssignment(_assignmentId) {
+    return ni('IAcademicRepository.publishAssignment');
+  }
+  /** @param {string|number} _examId */
+  publishExam(_examId) {
+    return ni('IAcademicRepository.publishExam');
+  }
+  /** @param {string} _reportKey @param {'pdf'|'csv'|'xlsx'} _format */
+  runReport(_reportKey, _format = 'pdf') {
+    return ni('IAcademicRepository.runReport');
+  }
+}
+
+export class IOperationsRepository {
+  getWorkspace() {
+    return ni('IOperationsRepository.getWorkspace');
+  }
+  /** @param {string|number} _ruleId */
+  acknowledgeRule(_ruleId) {
+    return ni('IOperationsRepository.acknowledgeRule');
   }
 }

@@ -35,7 +35,22 @@
   justify-content: flex-end;
 }
 @media (max-width: 767px) {
+  .head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .title {
     font-size: 26px;
+  }
+
+  .right {
+    min-width: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .right > * {
+    max-width: 100%;
   }
 }

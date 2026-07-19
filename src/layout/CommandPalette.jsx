@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@/ui';
 import { useT } from '@/hooks/useT.js';
-import { ALL_NAV } from './navConfig.js';
+import { ALL_NAV, visibleNav } from './navConfig.js';
 import styles from './CommandPalette.module.css';
 
 /**
@@ -12,18 +12,27 @@ import styles from './CommandPalette.module.css';
  *
  * @param {{ open: boolean, onClose: Function }} props
  */
-export function CommandPalette({ open, onClose }) {
+export function CommandPalette({ open, onClose, profile }) {
   const navigate = useNavigate();
   const { t } = useT();
   const inputRef = useRef(null);
+  const panelRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
 
   // Build the searchable page list once per language. Each entry keeps its
   // stable id/path and a localized label so filtering matches what users read.
   const pages = useMemo(
-    () => ALL_NAV.map((n) => ({ id: n.id, path: n.path, icon: n.icon, label: t(`nav.${n.id}`) })),
-    [t],
+    () =>
+      visibleNav(ALL_NAV, profile).map((n) => ({
+        id: n.id,
+        path: n.path,
+        icon: n.icon,
+        label: t(`nav.${n.id}`),
+      })),
+    [profile, t],
   );
 
   const results = useMemo(() => {
@@ -48,6 +57,40 @@ export function CommandPalette({ open, onClose }) {
     setActive((a) => Math.min(a, Math.max(0, results.length - 1)));
   }, [results.length]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const panel = panelRef.current;
+    const onDocumentKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab' || !panel) return;
+      const items = [
+        ...panel.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+      if (items.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onDocumentKeyDown);
+    return () => document.removeEventListener('keydown', onDocumentKeyDown);
+  }, [open]);
+
   if (!open) return null;
 
   const go = (path) => {
@@ -56,10 +99,7 @@ export function CommandPalette({ open, onClose }) {
   };
 
   const onKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      onClose();
-    } else if (e.key === 'ArrowDown') {
+    if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActive((a) => (results.length ? (a + 1) % results.length : 0));
     } else if (e.key === 'ArrowUp') {
@@ -75,10 +115,12 @@ export function CommandPalette({ open, onClose }) {
   return (
     <div className={styles.backdrop} onClick={onClose}>
       <div
+        ref={panelRef}
         className={styles.panel}
         role="dialog"
         aria-modal="true"
         aria-label={t('shell.searchAll')}
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.searchRow}>

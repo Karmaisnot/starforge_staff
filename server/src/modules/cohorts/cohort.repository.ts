@@ -46,8 +46,8 @@ export class CohortRepository {
     });
   }
 
-  getById(id: string, academyId: string) {
-    return this.db.cohort.findFirst({ where: { id, academyId } });
+  getById(id: string, academyId: string, teacherId: string) {
+    return this.db.cohort.findFirst({ where: { id, academyId, teacherId } });
   }
 
   /** Insert a new cohort. Localized leaves are stored as `{uz,ru,en}` Json. */

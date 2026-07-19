@@ -1,6 +1,8 @@
 // Demo teacher account. Display strings carry {uz,ru,en}; repos resolve to locale.
 export const teacherFixture = {
   name: 'Nigora Karimova',
+  roleKey: 'teacher',
+  accountKind: 'teacher',
   role: { uz: 'Matematika ustozi', ru: 'Учитель математики', en: 'Mathematics teacher' },
   branch: {
     uz: 'Demo Akademiya · Yunusobod',

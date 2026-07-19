@@ -48,7 +48,11 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
 
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: config.corsOrigins, credentials: true });
-  await app.register(authPlugin, { config });
+  await app.register(authPlugin, {
+    config,
+    assertSessionActive: (sessionId, teacherId) =>
+      container.services.auth.assertSessionActive(sessionId, teacherId),
+  });
 
   registerErrorHandler(app);
 

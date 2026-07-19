@@ -7,6 +7,7 @@ import { useServices } from '@/hooks/useServices.js';
 import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { isApiMode } from '@/data/http/apiConfig.js';
 import styles from './mgmt.module.css';
 
 function ChatPanel({ thread, sent, onSend, transcriptReloadKey }) {
@@ -221,6 +222,7 @@ export function MgmtPage() {
   // coming back preserves them (and a newly composed thread shows its first line).
   const [sentByThread, setSentByThread] = useState({});
   const [composeOpen, setComposeOpen] = useState(false);
+  const canCreateThread = !isApiMode();
   // Bumping these forces useAsync to re-run after a persisted mutation so the
   // server truth (transcript / thread preview / unread counts) reconciles.
   const [threadsReloadKey, setThreadsReloadKey] = useState(0);
@@ -331,9 +333,11 @@ export function MgmtPage() {
                 title={tt('mgmt.title')}
                 subtitle={tt('mgmt.emptyBody')}
                 right={
-                  <Button variant="primary" icon="edit" onClick={() => setComposeOpen(true)}>
-                    {tt('common.newMessage')}
-                  </Button>
+                  canCreateThread ? (
+                    <Button variant="primary" icon="edit" onClick={() => setComposeOpen(true)}>
+                      {tt('common.newMessage')}
+                    </Button>
+                  ) : null
                 }
               />
               <Card className={styles.emptyPage}>
@@ -343,16 +347,20 @@ export function MgmtPage() {
                   </div>
                   <h2 className={styles.emptyTitle}>{tt('mgmt.emptyTitle')}</h2>
                   <p className={styles.emptyCopy}>{tt('mgmt.emptyBody')}</p>
-                  <Button variant="soft" icon="edit" onClick={() => setComposeOpen(true)}>
-                    {tt('common.newMessage')}
-                  </Button>
+                  {canCreateThread && (
+                    <Button variant="soft" icon="edit" onClick={() => setComposeOpen(true)}>
+                      {tt('common.newMessage')}
+                    </Button>
+                  )}
                 </div>
               </Card>
-              <ComposeModal
-                open={composeOpen}
-                onClose={() => setComposeOpen(false)}
-                onCreate={createThread}
-              />
+              {canCreateThread && (
+                <ComposeModal
+                  open={composeOpen}
+                  onClose={() => setComposeOpen(false)}
+                  onCreate={createThread}
+                />
+              )}
             </>
           );
         }
@@ -363,9 +371,11 @@ export function MgmtPage() {
               title={tt('mgmt.title')}
               subtitle={tt('mgmt.subtitle')}
               right={
-                <Button variant="primary" icon="edit" onClick={() => setComposeOpen(true)}>
-                  {tt('common.newMessage')}
-                </Button>
+                canCreateThread ? (
+                  <Button variant="primary" icon="edit" onClick={() => setComposeOpen(true)}>
+                    {tt('common.newMessage')}
+                  </Button>
+                ) : null
               }
             />
 
@@ -444,11 +454,13 @@ export function MgmtPage() {
               />
             </div>
 
-            <ComposeModal
-              open={composeOpen}
-              onClose={() => setComposeOpen(false)}
-              onCreate={createThread}
-            />
+            {canCreateThread && (
+              <ComposeModal
+                open={composeOpen}
+                onClose={() => setComposeOpen(false)}
+                onCreate={createThread}
+              />
+            )}
           </>
         );
       }}

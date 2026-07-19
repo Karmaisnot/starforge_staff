@@ -9,6 +9,9 @@
   grid-template-columns: 1fr 380px;
   gap: 20px;
 }
+.grid > * {
+  min-width: 0;
+}
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: 1fr;
@@ -16,7 +19,7 @@
 }
 .printersGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
   gap: 12px;
 }
 .printerIcon {

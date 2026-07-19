@@ -9,9 +9,7 @@ import {
   Card,
   Chip,
   Icon,
-  Modal,
   ProgressBar,
-  Stat,
   StarMark,
   StudentCard,
 } from '@/ui';
@@ -20,476 +18,797 @@ import { priorityColor } from '@/domain/models/task.js';
 import { useToday } from '@/hooks/data.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { readDashboardHiddenWidgets } from './dashboardPreferences.js';
 import styles from './today.module.css';
 
-const WIDGET_KEYS = [
-  'schedule',
-  'recentCards',
-  'pendingTasks',
-  'printQueue',
-  'spotlight',
-  'activity',
-];
+const METRIC_ICONS = ['cal', 'cohort', 'brand', 'flag', 'check'];
 
 export function TodayPage() {
   const navigate = useNavigate();
   const { t } = useT();
   const toast = useToast();
   const state = useToday();
-  const [widgetsOpen, setWidgetsOpen] = useState(false);
-  const [hidden, setHidden] = useState({});
+  const [hidden] = useState(readDashboardHiddenWidgets);
   const [doneTasks, setDoneTasks] = useState({});
   const show = (key) => !hidden[key];
-  const toggleWidget = (key) => setHidden((h) => ({ ...h, [key]: !h[key] }));
   const toggleTask = (key) => {
-    setDoneTasks((d) => ({ ...d, [key]: !d[key] }));
+    setDoneTasks((current) => ({ ...current, [key]: !current[key] }));
     toast(doneTasks[key] ? t('today.taskUndone') : t('today.taskDone'));
-  };
-  const stop = (fn) => (e) => {
-    e.stopPropagation();
-    fn();
   };
 
   return (
     <AsyncBoundary state={state}>
-      {(d) => (
-        <>
-          <PageHeader
-            eyebrow={d.meta.dateLabel}
-            title={
-              <>
-                {t('today.greeting')} <span className="sf-serif">{d.meta.greetingName}</span>
-              </>
-            }
-            subtitle={d.meta.summary}
-            right={
-              <>
-                <Button variant="soft" icon="edit" onClick={() => setWidgetsOpen(true)}>
-                  {t('today.widgets')}
-                </Button>
-                <Button variant="primary" icon="plus" onClick={() => navigate('/cards')}>
-                  {t('common.giveCard')}
-                </Button>
-              </>
-            }
-          />
+      {(data) => {
+        const performance = normalizePerformance(data.performance);
+        const staffMode = data.workspaceMode === 'staff';
 
-          {/* Urgent survey banner */}
-          {d.surveyBanner && (
-            <div className={styles.surveyBanner} onClick={() => navigate('/surveys')}>
-              <div className={styles.surveyGlow} />
-              <div className={styles.surveyInner}>
-                <span className={styles.pulseDot} />
-                <div style={{ flex: 1 }}>
-                  <div className={styles.surveyEyebrow}>
-                    {t('today.surveyWord')} · {d.surveyBanner.remaining}
-                  </div>
-                  <div className={styles.surveyTitle}>
-                    {d.surveyBanner.title}{' '}
-                    <span style={{ color: 'var(--sf-muted)', fontWeight: 500 }}>
-                      · {d.surveyBanner.meta}
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  variant="ink"
-                  icon="arrowR"
-                  iconRight
-                  onClick={stop(() => navigate('/surveys'))}
-                >
-                  {t('common.continue')}
-                </Button>
-              </div>
+        return (
+          <>
+            <PageHeader
+              eyebrow={`${t('today.commandCenter')} · ${data.meta.dateLabel}`}
+              title={
+                <>
+                  {t('today.greeting')} <span className="sf-serif">{data.meta.greetingName}</span>
+                </>
+              }
+              subtitle={data.meta.summary}
+            />
+
+            {data.surveyBanner && (
+              <SurveyBanner data={data.surveyBanner} t={t} onOpen={() => navigate('/surveys')} />
+            )}
+
+            <div className={`${styles.commandGrid} ${staffMode ? styles.singleCommand : ''}`}>
+              <NextLesson lesson={data.heroLesson} t={t} navigate={navigate} />
+              {!staffMode && <RankCard rank={performance.rank} t={t} />}
             </div>
-          )}
 
-          {/* Stats */}
-          <div className={styles.statGrid}>
-            {d.stats.map((s, i) => (
-              <Stat
-                key={i}
-                value={s.value}
-                unit={s.unit}
-                label={s.label}
-                color={s.color}
-                trend={s.trend}
+            <section className={styles.performanceSection} aria-labelledby="performance-heading">
+              <SectionHeading
+                id="performance-heading"
+                eyebrow={t('today.performanceOverview')}
+                title={t(staffMode ? 'today.staffOverview' : 'today.teacherPerformance')}
+                meta={
+                  performance.updatedAt
+                    ? `${t('today.updated')} · ${performance.updatedAt}`
+                    : undefined
+                }
               />
-            ))}
-          </div>
 
-          {/* Main grid */}
-          <div className={styles.grid2}>
-            <div className={styles.col}>
-              {/* Hero */}
-              <div className={styles.hero} onClick={() => navigate('/cohorts')}>
-                <StarMark size={220} color="#fffcf5" className={styles.heroStar} />
-                <div className={styles.heroInner}>
-                  <div className={styles.heroTop}>
-                    <div>
-                      <div className={styles.heroEyebrow}>{d.heroLesson.eyebrow}</div>
-                      <div className={styles.heroTitle}>
-                        {d.heroLesson.title} ·{' '}
-                        <span className="sf-serif" style={{ fontWeight: 400 }}>
-                          {d.heroLesson.titleAccent}
-                        </span>
-                      </div>
-                      <div className={styles.heroSub}>{d.heroLesson.sub}</div>
-                    </div>
-                    <div className={styles.heroTime}>
-                      <span className={`sf-mono ${styles.heroClock}`}>{d.heroLesson.start}</span>
-                      <span className={styles.heroClockSub}>{d.heroLesson.end}</span>
-                    </div>
-                  </div>
-                  <div className={styles.heroActions}>
-                    <Button variant="cream" icon="check" onClick={stop(() => navigate('/cohorts'))}>
-                      {t('today.takeAttendance')}
-                    </Button>
-                    <Button variant="cream-ghost" onClick={stop(() => navigate('/materials'))}>
-                      {t('today.materials')}
-                    </Button>
-                    <Button variant="cream-ghost" onClick={stop(() => navigate('/materials'))}>
-                      {t('today.lessonPlan')}
-                    </Button>
-                  </div>
-                </div>
+              <div className={styles.metricGrid}>
+                {data.stats.map((metric, index) => (
+                  <MetricCard
+                    key={`${metric.label}-${index}`}
+                    metric={metric}
+                    icon={METRIC_ICONS[index % METRIC_ICONS.length]}
+                    index={index}
+                  />
+                ))}
               </div>
 
-              {/* Schedule */}
-              <Card
-                style={{ display: show('schedule') ? undefined : 'none' }}
-                title={t('today.scheduleTitle')}
-                padded={false}
-                action={
-                  <button
-                    type="button"
-                    className={styles.link}
-                    onClick={() => navigate('/cohorts')}
+              {!staffMode && (
+                <div className={styles.analyticsGrid}>
+                  <DashboardPanel
+                    className={styles.trendPanel}
+                    title={t('today.attendanceTrend')}
+                    subtitle={t('today.attendanceTrendSub')}
                   >
-                    {d.schedule.length} {t('today.lessonsLink')}
-                  </button>
-                }
-              >
-                {d.schedule.map((row, i) => (
-                  <div
-                    key={i}
-                    className={`${styles.schedRow} ${row.state === 'gap' ? styles.schedGap : ''}`}
-                  >
-                    <span className={`sf-mono ${styles.schedTime}`}>{row.time}</span>
-                    <span
-                      className={styles.schedRail}
-                      style={{ background: slotRailColor(row.state) }}
+                    <AttendanceChart
+                      points={performance.attendanceTrend}
+                      emptyLabel={t('today.noPerformanceData')}
                     />
-                    <span className={styles.schedL}>{row.label}</span>
-                    <span className={styles.schedR}>{row.room}</span>
-                    <span>
-                      {row.state === 'now' && (
-                        <Chip tone="primary">
-                          {t('today.now')} · {row.mins}
-                        </Chip>
-                      )}
-                      {row.state === 'next' && <Chip tone="accent">{t('today.next')}</Chip>}
-                    </span>
-                  </div>
-                ))}
-              </Card>
+                  </DashboardPanel>
 
-              {/* Recent cards */}
-              <Card
-                style={{ display: show('recentCards') ? undefined : 'none' }}
-                title={t('today.recentCards')}
-                action={
-                  <button type="button" className={styles.link} onClick={() => navigate('/cards')}>
-                    {d.recentCards.length} {t('today.tenLink')}
-                  </button>
-                }
-              >
-                <div className={styles.cardsStrip}>
-                  {d.recentCards.map((c) => (
-                    <StudentCard
-                      key={c.id}
-                      kind={c.kind}
-                      recipient={c.recipient}
-                      reason={c.reason}
-                      issuer={c.issuer}
-                      when={c.when}
-                      typeName={c.typeName}
-                      onClick={() => navigate('/cards')}
+                  <DashboardPanel
+                    title={t('today.teachingLoad')}
+                    subtitle={t('today.teachingLoadSub')}
+                  >
+                    <TeachingLoadChart
+                      points={performance.weeklyLoad}
+                      unit={t('today.lessonsShort')}
+                      emptyLabel={t('today.noPerformanceData')}
                     />
-                  ))}
+                  </DashboardPanel>
+
+                  <DashboardPanel
+                    title={t('today.scoreBreakdown')}
+                    subtitle={t('today.scoreBreakdownSub')}
+                  >
+                    <ScoreBreakdown
+                      rows={performance.scoreBreakdown}
+                      targetLabel={t('today.target')}
+                      emptyLabel={t('today.noPerformanceData')}
+                    />
+                  </DashboardPanel>
+
+                  <DashboardPanel
+                    title={t('today.groupHealth')}
+                    subtitle={t('today.groupHealthSub')}
+                  >
+                    <GroupHealth
+                      groups={performance.groupHealth}
+                      t={t}
+                      onOpen={() => navigate('/cohorts')}
+                    />
+                  </DashboardPanel>
                 </div>
-              </Card>
+              )}
+            </section>
 
-              {/* Pending tasks */}
-              <Card
-                style={{ display: show('pendingTasks') ? undefined : 'none' }}
-                title={`${t('today.pendingTitle')} · ${d.pendingTasks.length}`}
-                padded={false}
-                action={
-                  <button type="button" className={styles.link} onClick={() => navigate('/tasks')}>
-                    {t('today.allLink')}
-                  </button>
-                }
-              >
-                {d.pendingTasks.map((task, i) => (
-                  <div key={i} className={styles.taskRow}>
-                    <div
-                      className={styles.taskRail}
-                      style={{ background: task.urgent ? 'var(--sf-danger)' : task.projectColor }}
+            <section className={styles.operationsSection} aria-labelledby="operations-heading">
+              <SectionHeading
+                id="operations-heading"
+                eyebrow={data.meta.dateLabel}
+                title={t('today.todayOperations')}
+              />
+
+              <div className={styles.operationsGrid}>
+                <div className={styles.primaryFlow}>
+                  {!staffMode && show('schedule') && (
+                    <ScheduleCard rows={data.schedule} t={t} onOpen={() => navigate('/cohorts')} />
+                  )}
+                  {show('pendingTasks') && (
+                    <TasksCard
+                      tasks={data.pendingTasks}
+                      doneTasks={doneTasks}
+                      onToggle={toggleTask}
+                      t={t}
+                      onOpen={() => navigate('/tasks')}
                     />
-                    <button
-                      type="button"
-                      className={styles.taskCheck}
-                      aria-label={t('tasks.toggleState')}
-                      aria-pressed={Boolean(doneTasks[i])}
-                      onClick={() => toggleTask(i)}
-                      style={{
-                        background: doneTasks[i] ? 'var(--sf-success)' : 'transparent',
-                        borderColor: doneTasks[i] ? 'var(--sf-success)' : 'var(--sf-border-strong)',
-                      }}
-                    >
-                      {doneTasks[i] && (
-                        <Icon name="check" size={11} stroke={3} style={{ color: '#fffcf5' }} />
-                      )}
-                    </button>
-                    <div className={styles.taskBody}>
-                      <div className={styles.taskChips}>
-                        {task.fromMgmt && <Chip tone="ink">{t('common.mgmtFull')}</Chip>}
-                        <Chip>
-                          <span
-                            className={styles.projDot}
-                            style={{ background: task.projectColor }}
-                          />
-                          {task.project}
-                        </Chip>
-                      </div>
-                      <div
-                        className={styles.taskTitle}
-                        style={{
-                          textDecoration: doneTasks[i] ? 'line-through' : 'none',
-                          color: doneTasks[i] ? 'var(--sf-muted)' : undefined,
-                        }}
-                      >
-                        {task.title}
-                      </div>
-                    </div>
-                    <span
-                      className={`sf-mono ${styles.taskPri}`}
-                      style={{ color: priorityColor(task.priority) }}
-                    >
-                      {task.priority}
-                    </span>
-                    <span
-                      className={`sf-mono ${styles.taskDl}`}
-                      style={{
-                        color: task.urgent ? 'var(--sf-danger)' : 'var(--sf-ink-2)',
-                        fontWeight: task.urgent ? 700 : 500,
-                      }}
-                    >
-                      {task.deadline}
-                    </span>
-                  </div>
-                ))}
-              </Card>
-            </div>
-
-            {/* Right column */}
-            <div className={styles.col}>
-              {/* AI insight */}
-              <div className={styles.aiCard} onClick={() => navigate('/ai')}>
-                <div className={styles.aiBg} />
-                <div style={{ position: 'relative' }}>
-                  <div className={styles.aiHead}>
-                    <AiBadge>{d.aiInsight.eyebrow}</AiBadge>
-                    <span style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
-                      {d.aiInsight.count}
-                    </span>
-                  </div>
-                  <div className={styles.aiQuote}>{d.aiInsight.quote}</div>
-                  <div className={styles.aiChips}>
-                    {d.aiInsight.chips.map((c) => (
-                      <Chip key={c} tone="ai">
-                        {c}
-                      </Chip>
-                    ))}
-                  </div>
-                  <Button
-                    variant="ink"
-                    icon="arrowR"
-                    iconRight
-                    style={{ marginTop: 14 }}
-                    onClick={stop(() => navigate('/ai'))}
-                  >
-                    {t('today.goToChat')}
-                  </Button>
+                  )}
+                  {!staffMode && show('recentCards') && (
+                    <RecentCards cards={data.recentCards} t={t} onOpen={() => navigate('/cards')} />
+                  )}
                 </div>
+
+                <aside className={styles.contextFlow}>
+                  {!staffMode && data.aiInsight && (
+                    <AiInsight insight={data.aiInsight} t={t} onOpen={() => navigate('/ai')} />
+                  )}
+
+                  {show('activity') && data.activity?.length > 0 && (
+                    <ActivityCard items={data.activity} t={t} />
+                  )}
+
+                  {data.mgmtMention?.message && (
+                    <ManagementCard mention={data.mgmtMention} onOpen={() => navigate('/mgmt')} />
+                  )}
+
+                  {!staffMode && show('spotlight') && data.spotlight && (
+                    <SpotlightCard
+                      spotlight={data.spotlight}
+                      t={t}
+                      onOpen={() => navigate('/cohorts')}
+                    />
+                  )}
+
+                  {show('printQueue') && data.printQueue?.length > 0 && (
+                    <PrintQueue jobs={data.printQueue} t={t} onOpen={() => navigate('/print')} />
+                  )}
+                </aside>
               </div>
-
-              {/* Print queue */}
-              <Card
-                style={{ display: show('printQueue') ? undefined : 'none' }}
-                title={t('today.printQueue')}
-                padded={false}
-                action={
-                  <button type="button" className={styles.link} onClick={() => navigate('/print')}>
-                    {d.printQueue.length} {t('today.twoLink')}
-                  </button>
-                }
-              >
-                {d.printQueue.map((j, i) => (
-                  <div key={j.id}>
-                    {i > 0 && <div className={styles.printDivider} />}
-                    <div className={styles.printRow}>
-                      <div className={styles.docThumb}>
-                        <Icon name={j.icon} size={18} />
-                        <div className={styles.docMult}>×{j.copies}</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className={styles.printT}>{j.doc}</div>
-                        <div className={styles.printSub}>{j.sub}</div>
-                        {j.progress != null && (
-                          <ProgressBar value={j.progress} color="var(--sf-primary)" />
-                        )}
-                        <div className={styles.printEta}>{j.eta}</div>
-                      </div>
-                      <Chip tone={j.tone}>{j.label}</Chip>
-                    </div>
-                  </div>
-                ))}
-              </Card>
-
-              {/* Mgmt mention */}
-              <Card padded={false}>
-                <div
-                  className={styles.mgmtRow}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/mgmt')}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      navigate('/mgmt');
-                    }
-                  }}
-                >
-                  <Avatar name={d.mgmtMention.name} size={40} color="var(--sf-primary)" />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 700 }}>{d.mgmtMention.name}</span>
-                      <Chip tone="primary">{d.mgmtMention.role}</Chip>
-                    </div>
-                    <div className={styles.mgmtMsg}>{d.mgmtMention.message}</div>
-                  </div>
-                  <span className="sf-mono" style={{ fontSize: 10, color: 'var(--sf-muted)' }}>
-                    {d.mgmtMention.time}
-                  </span>
-                  <span className={styles.unreadDot} />
-                </div>
-              </Card>
-
-              {/* Spotlight */}
-              <Card
-                style={{ display: show('spotlight') ? undefined : 'none' }}
-                title={t('today.spotlight')}
-                action={
-                  <button
-                    type="button"
-                    className={styles.link}
-                    onClick={() => navigate('/cohorts')}
-                  >
-                    {t('today.change')}
-                  </button>
-                }
-              >
-                <div className={styles.spotlightHead}>
-                  <div className={styles.spotlightMark}>
-                    <StarMark size={22} color="#fffcf5" />
-                  </div>
-                  <div>
-                    <div className={styles.spotlightName}>{d.spotlight.name}</div>
-                    <div className={styles.spotlightSub}>{d.spotlight.sub}</div>
-                  </div>
-                  <Chip tone={d.spotlight.tone}>{d.spotlight.toneLabel}</Chip>
-                </div>
-                <div className={styles.spotlightStats}>
-                  {d.spotlight.stats.map((s, i) => (
-                    <div key={i} className={styles.spotlightStat}>
-                      <div
-                        className="sf-mono"
-                        style={{ fontSize: 18, fontWeight: 700, color: s.color }}
-                      >
-                        {s.value}
-                      </div>
-                      <div className={styles.spotlightStatL}>{s.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Activity */}
-              <Card
-                style={{ display: show('activity') ? undefined : 'none' }}
-                title={t('today.activity')}
-              >
-                {d.activity.map((a, i) => (
-                  <div key={i} className={styles.activityRow}>
-                    {a.who === 'AI' ? (
-                      <div className={styles.aiMini}>Ai</div>
-                    ) : (
-                      <div
-                        className={styles.activityIcon}
-                        style={{ background: `${a.color}22`, color: a.color }}
-                      >
-                        {a.icon && <Icon name={a.icon} size={12} />}
-                      </div>
-                    )}
-                    <div style={{ flex: 1, fontSize: 12, lineHeight: 1.4 }}>
-                      <span style={{ fontWeight: 700 }}>{a.who}</span>
-                      <span style={{ color: 'var(--sf-muted)' }}> {a.what}</span>
-                    </div>
-                    <span className="sf-mono" style={{ fontSize: 10, color: 'var(--sf-muted)' }}>
-                      {a.time}
-                    </span>
-                  </div>
-                ))}
-              </Card>
-            </div>
-          </div>
-
-          <Modal
-            open={widgetsOpen}
-            onClose={() => setWidgetsOpen(false)}
-            title={t('today.widgets')}
-            footer={
-              <Button variant="primary" icon="check" onClick={() => setWidgetsOpen(false)}>
-                {t('common.continue')}
-              </Button>
-            }
-          >
-            <div className={styles.widgetList}>
-              {WIDGET_KEYS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={styles.widgetRow}
-                  aria-pressed={show(key)}
-                  onClick={() => toggleWidget(key)}
-                >
-                  <span>{t(`today.w_${key}`)}</span>
-                  <span
-                    className={styles.widgetToggle}
-                    style={{
-                      background: show(key) ? 'var(--sf-primary)' : 'var(--sf-surface-3)',
-                    }}
-                    data-on={show(key) ? '1' : '0'}
-                  >
-                    <span className={styles.widgetKnob} />
-                  </span>
-                </button>
-              ))}
-            </div>
-          </Modal>
-        </>
-      )}
+            </section>
+          </>
+        );
+      }}
     </AsyncBoundary>
   );
+}
+
+function SurveyBanner({ data, t, onOpen }) {
+  return (
+    <button type="button" className={styles.surveyBanner} onClick={onOpen}>
+      <span className={styles.surveySignal} aria-hidden="true" />
+      <span className={styles.surveyCopy}>
+        <span className={styles.surveyEyebrow}>
+          {t('today.surveyWord')} · {data.remaining}
+        </span>
+        <strong>{data.title}</strong>
+        <span>{data.meta}</span>
+      </span>
+      <span className={styles.surveyAction}>
+        {t('common.continue')}
+        <Icon name="arrowR" size={15} />
+      </span>
+    </button>
+  );
+}
+
+function NextLesson({ lesson, t, navigate }) {
+  const hasLesson = lesson?.available !== false && lesson?.start && lesson.start !== '—';
+  const staffClear = lesson?.kind === 'staff';
+  if (!hasLesson) {
+    return (
+      <section className={`${styles.lessonHero} ${styles.restHero}`}>
+        <StarMark size={250} color="var(--sf-primary)" className={styles.lessonStar} />
+        <div className={styles.lessonTopline}>
+          <span>{t(staffClear ? 'today.dayClearStaff' : 'today.dayClear')}</span>
+          <span className={styles.restBadge}>
+            <Icon name="sun" size={13} /> {t('today.restStatus')}
+          </span>
+        </div>
+        <div className={styles.restCopy}>
+          <span className={styles.restMark}>
+            <Icon name="check" size={22} />
+          </span>
+          <h2>{t(staffClear ? 'today.restTitleStaff' : 'today.restTitle')}</h2>
+          <p>{t(staffClear ? 'today.restBodyStaff' : 'today.restBody')}</p>
+        </div>
+      </section>
+    );
+  }
+
+  const isMeeting = lesson.kind === 'meeting';
+
+  return (
+    <section className={styles.lessonHero}>
+      <StarMark size={250} color="#fffcf5" className={styles.lessonStar} />
+      <div className={styles.lessonTopline}>
+        <span>{lesson.eyebrow}</span>
+        <span className={styles.liveBadge}>
+          <span aria-hidden="true" /> {t(isMeeting ? 'today.upcoming' : 'today.now')}
+        </span>
+      </div>
+      <div className={styles.lessonMain}>
+        <div>
+          <h2>
+            {lesson.title} <span className="sf-serif">{lesson.titleAccent}</span>
+          </h2>
+          <p>{lesson.sub}</p>
+        </div>
+        <div className={styles.lessonTime}>
+          <strong>{lesson.start}</strong>
+          <span>{lesson.end}</span>
+        </div>
+      </div>
+      <div className={styles.lessonActions}>
+        {isMeeting ? (
+          <>
+            <Button variant="cream" icon="cal" onClick={() => navigate('/work')}>
+              {t('today.viewWork')}
+            </Button>
+            <Button variant="cream-ghost" icon="chat" onClick={() => navigate('/messages')}>
+              {t('nav.messages')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="cream" icon="check" onClick={() => navigate('/cohorts')}>
+              {t('today.takeAttendance')}
+            </Button>
+            <Button variant="cream-ghost" icon="book" onClick={() => navigate('/materials')}>
+              {t('today.lessonPlan')}
+            </Button>
+            <Button variant="cream-ghost" icon="folder" onClick={() => navigate('/materials')}>
+              {t('today.materials')}
+            </Button>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function RankCard({ rank, t }) {
+  const hasRank = rank.position > 0 && rank.total > 0;
+  return (
+    <section className={styles.rankCard}>
+      <div className={styles.rankHeader}>
+        <div>
+          <span className={styles.panelEyebrow}>{t('today.branchRank')}</span>
+          <h2>{t('today.performanceScore')}</h2>
+        </div>
+        {rank.percentile && <Chip tone="accent">{rank.percentile}</Chip>}
+      </div>
+
+      {hasRank ? (
+        <>
+          <div className={styles.rankMain}>
+            <ScoreRing value={rank.score} />
+            <div className={styles.rankPosition}>
+              <span className="sf-mono">#{rank.position}</span>
+              <small>/ {rank.total}</small>
+            </div>
+          </div>
+          <div className={styles.rankSignals}>
+            <div>
+              <Icon name="trend" size={14} />
+              <strong>+{rank.change}</strong>
+              <span>{t('today.placesThisMonth')}</span>
+            </div>
+            <div>
+              <Icon name="flag" size={14} />
+              <strong>{rank.nextGap}</strong>
+              <span>{t('today.pointsToNext')}</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className={styles.emptyPerformance}>{t('today.noPerformanceData')}</div>
+      )}
+    </section>
+  );
+}
+
+function ScoreRing({ value }) {
+  const safeValue = clamp(value, 0, 100);
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - safeValue / 100);
+  return (
+    <div className={styles.scoreRing}>
+      <svg viewBox="0 0 100 100" role="img" aria-label={`${safeValue}%`}>
+        <circle className={styles.scoreTrack} cx="50" cy="50" r={radius} />
+        <circle
+          className={styles.scoreValue}
+          cx="50"
+          cy="50"
+          r={radius}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+        />
+      </svg>
+      <strong className="sf-mono">{safeValue}</strong>
+      <span>/ 100</span>
+    </div>
+  );
+}
+
+function SectionHeading({ id, eyebrow, title, meta }) {
+  return (
+    <div className={styles.sectionHeading}>
+      <div>
+        <span>{eyebrow}</span>
+        <h2 id={id}>{title}</h2>
+      </div>
+      {meta && <small className="sf-mono">{meta}</small>}
+    </div>
+  );
+}
+
+function MetricCard({ metric, icon, index }) {
+  return (
+    <article className={styles.metricCard} style={{ '--metric-index': index }}>
+      <div className={styles.metricTop}>
+        <span className={styles.metricIcon}>
+          <Icon name={icon} size={15} />
+        </span>
+        {metric.trend && (
+          <span className={metric.trend.up ? styles.metricUp : styles.metricDown}>
+            {metric.trend.value}
+          </span>
+        )}
+      </div>
+      <div className={styles.metricValue} style={{ color: metric.color }}>
+        <strong className="sf-mono">{metric.value}</strong>
+        {metric.unit && <span>{metric.unit}</span>}
+      </div>
+      <p>{metric.label}</p>
+    </article>
+  );
+}
+
+function DashboardPanel({ title, subtitle, className = '', children }) {
+  return (
+    <section className={`${styles.dashboardPanel} ${className}`}>
+      <header className={styles.panelHeader}>
+        <div>
+          <h3>{title}</h3>
+          <p>{subtitle}</p>
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function AttendanceChart({ points, emptyLabel }) {
+  if (points.length < 2) return <div className={styles.emptyPerformance}>{emptyLabel}</div>;
+
+  const width = 680;
+  const height = 230;
+  const left = 38;
+  const right = 16;
+  const top = 18;
+  const bottom = 36;
+  const min = 80;
+  const max = 100;
+  const xStep = (width - left - right) / (points.length - 1);
+  const y = (value) =>
+    top + ((max - clamp(value, min, max)) / (max - min)) * (height - top - bottom);
+  const coords = points.map((point, index) => [left + index * xStep, y(point.value)]);
+  const path = coords
+    .map(([x, pointY], index) => `${index === 0 ? 'M' : 'L'} ${x} ${pointY}`)
+    .join(' ');
+  const latest = points.at(-1);
+
+  return (
+    <div className={styles.lineChart}>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${latest.value}%`}>
+        {[80, 90, 100].map((tick) => {
+          const tickY = y(tick);
+          return (
+            <g key={tick}>
+              <line x1={left} x2={width - right} y1={tickY} y2={tickY} />
+              <text x="0" y={tickY + 4}>
+                {tick}%
+              </text>
+            </g>
+          );
+        })}
+        <path className={styles.trendLine} d={path} />
+        {coords.map(([x, pointY], index) => (
+          <g key={`${points[index].label}-${index}`}>
+            <circle
+              className={index === coords.length - 1 ? styles.currentPoint : ''}
+              cx={x}
+              cy={pointY}
+              r={index === coords.length - 1 ? 5 : 3}
+            />
+            {(index % 2 === 0 || index === coords.length - 1) && (
+              <text className={styles.axisLabel} x={x} y={height - 10} textAnchor="middle">
+                {points[index].label}
+              </text>
+            )}
+          </g>
+        ))}
+      </svg>
+      <div className={styles.chartCurrent}>
+        <span>{latest.label}</span>
+        <strong className="sf-mono">{latest.value}%</strong>
+      </div>
+    </div>
+  );
+}
+
+function TeachingLoadChart({ points, unit, emptyLabel }) {
+  if (!points.length) return <div className={styles.emptyPerformance}>{emptyLabel}</div>;
+  const max = Math.max(1, ...points.map((point) => point.value));
+  const total = points.reduce((sum, point) => sum + point.value, 0);
+  return (
+    <div className={styles.loadChart}>
+      <div className={styles.loadTotal}>
+        <strong className="sf-mono">{total}</strong>
+        <span>{unit}</span>
+      </div>
+      <div className={styles.loadBars}>
+        {points.map((point, index) => (
+          <div key={`${point.label}-${index}`} className={styles.loadColumn}>
+            <span className="sf-mono">{point.value}</span>
+            <div className={styles.loadTrack}>
+              <div style={{ height: `${(point.value / max) * 100}%` }} />
+            </div>
+            <small>{point.label}</small>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScoreBreakdown({ rows, targetLabel, emptyLabel }) {
+  if (!rows.length) return <div className={styles.emptyPerformance}>{emptyLabel}</div>;
+  return (
+    <div className={styles.scoreRows}>
+      {rows.map((row, index) => (
+        <div key={`${row.label}-${index}`} className={styles.scoreRow}>
+          <div className={styles.scoreRowTop}>
+            <span>{row.label}</span>
+            <strong className="sf-mono">{row.value}%</strong>
+          </div>
+          <div className={styles.scoreBar}>
+            <div style={{ width: `${clamp(row.value, 0, 100)}%` }} />
+            <span
+              style={{ left: `${clamp(row.target, 0, 100)}%` }}
+              title={`${targetLabel}: ${row.target}%`}
+            />
+          </div>
+          <small>
+            {targetLabel} · {row.target}%
+          </small>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GroupHealth({ groups, t, onOpen }) {
+  if (!groups.length)
+    return <div className={styles.emptyPerformance}>{t('today.noPerformanceData')}</div>;
+  return (
+    <div className={styles.groupRows}>
+      {groups.map((group) => {
+        const healthy = group.attendance >= 90 && group.down <= 4;
+        return (
+          <button key={group.name} type="button" className={styles.groupRow} onClick={onOpen}>
+            <div className={styles.groupIdentity}>
+              <span className={styles.groupMark}>
+                <StarMark size={16} color="#fffcf5" />
+              </span>
+              <div>
+                <strong>{group.name}</strong>
+                <span>{healthy ? t('today.onTrack') : t('today.needsAttention')}</span>
+              </div>
+            </div>
+            <div className={styles.groupAttendance}>
+              <div>
+                <span style={{ width: `${clamp(group.attendance, 0, 100)}%` }} />
+              </div>
+              <strong className="sf-mono">{group.attendance}%</strong>
+            </div>
+            <div className={styles.groupCards}>
+              <span>↑{group.up}</span>
+              <span>↓{group.down}</span>
+            </div>
+            <Icon name="chevR" size={14} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ScheduleCard({ rows, t, onOpen }) {
+  return (
+    <Card
+      className={styles.operationCard}
+      title={t('today.scheduleTitle')}
+      padded={false}
+      action={
+        <TextLink onClick={onOpen}>
+          {rows.length} {t('today.lessonsLink')}
+        </TextLink>
+      }
+    >
+      <div className={styles.scheduleTimeline}>
+        {rows.map((row, index) => (
+          <button
+            key={`${row.time}-${index}`}
+            type="button"
+            className={styles.scheduleRow}
+            onClick={onOpen}
+          >
+            <span className={`sf-mono ${styles.scheduleTime}`}>{row.time}</span>
+            <span
+              className={styles.scheduleNode}
+              style={{ '--rail-color': slotRailColor(row.state) }}
+            />
+            <span className={styles.scheduleLabel}>
+              <strong>{row.label}</strong>
+              <small>{row.room}</small>
+            </span>
+            {row.state === 'now' && (
+              <Chip tone="primary">
+                {t('today.now')} · {row.mins}
+              </Chip>
+            )}
+            {row.state === 'next' && <Chip tone="accent">{t('today.next')}</Chip>}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function TasksCard({ tasks, doneTasks, onToggle, t, onOpen }) {
+  return (
+    <Card
+      className={styles.operationCard}
+      title={`${t('today.pendingTitle')} · ${tasks.length}`}
+      padded={false}
+      action={<TextLink onClick={onOpen}>{t('today.allLink')}</TextLink>}
+    >
+      {tasks.map((task, index) => (
+        <div key={`${task.title}-${index}`} className={styles.taskRow}>
+          <span
+            className={styles.taskRail}
+            style={{ background: task.urgent ? 'var(--sf-danger)' : task.projectColor }}
+          />
+          <button
+            type="button"
+            className={styles.taskCheck}
+            aria-label={t('tasks.toggleState')}
+            aria-pressed={Boolean(doneTasks[index])}
+            onClick={() => onToggle(index)}
+            data-done={doneTasks[index] ? '1' : '0'}
+          >
+            {doneTasks[index] && <Icon name="check" size={11} stroke={3} />}
+          </button>
+          <div className={styles.taskBody}>
+            <div className={styles.taskMeta}>
+              {task.fromMgmt && <Chip tone="ink">{t('common.mgmtFull')}</Chip>}
+              <span>
+                <i style={{ background: task.projectColor }} />
+                {task.project}
+              </span>
+            </div>
+            <strong className={doneTasks[index] ? styles.taskDone : ''}>{task.title}</strong>
+          </div>
+          <span className="sf-mono" style={{ color: priorityColor(task.priority) }}>
+            {task.priority}
+          </span>
+          <span className={`sf-mono ${task.urgent ? styles.taskUrgent : ''}`}>{task.deadline}</span>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function RecentCards({ cards, t, onOpen }) {
+  return (
+    <Card
+      className={styles.operationCard}
+      title={t('today.recentCards')}
+      action={
+        <TextLink onClick={onOpen}>
+          {cards.length} {t('today.tenLink')}
+        </TextLink>
+      }
+    >
+      <div className={styles.cardsStrip}>
+        {cards.map((card) => (
+          <StudentCard key={card.id} {...card} onClick={onOpen} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function AiInsight({ insight, t, onOpen }) {
+  return (
+    <button type="button" className={styles.aiCard} onClick={onOpen}>
+      <div className={styles.aiHeader}>
+        <AiBadge>{insight.eyebrow}</AiBadge>
+        <span>{insight.count}</span>
+      </div>
+      <blockquote>{insight.quote}</blockquote>
+      <div className={styles.aiChips}>
+        {insight.chips.map((chip) => (
+          <Chip key={chip} tone="ai">
+            {chip}
+          </Chip>
+        ))}
+      </div>
+      <span className={styles.aiAction}>
+        {t('today.goToChat')} <Icon name="arrowR" size={14} />
+      </span>
+    </button>
+  );
+}
+
+function ActivityCard({ items, t }) {
+  return (
+    <Card className={styles.contextCard} title={t('today.activity')}>
+      {items.map((item, index) => (
+        <div key={`${item.who}-${index}`} className={styles.activityRow}>
+          {item.who === 'AI' ? (
+            <span className={styles.aiMini}>AI</span>
+          ) : (
+            <span
+              className={styles.activityIcon}
+              style={{ background: `${item.color}22`, color: item.color }}
+            >
+              {item.icon && <Icon name={item.icon} size={12} />}
+            </span>
+          )}
+          <p>
+            <strong>{item.who}</strong> {item.what}
+          </p>
+          <time className="sf-mono">{item.time}</time>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function ManagementCard({ mention, onOpen }) {
+  return (
+    <button type="button" className={styles.managementCard} onClick={onOpen}>
+      <Avatar name={mention.name} size={42} color="var(--sf-primary)" />
+      <span className={styles.managementCopy}>
+        <span>
+          <strong>{mention.name}</strong>
+          <Chip tone="primary">{mention.role}</Chip>
+        </span>
+        <small>{mention.message}</small>
+      </span>
+      <time className="sf-mono">{mention.time}</time>
+      <span className={styles.unreadDot} aria-hidden="true" />
+    </button>
+  );
+}
+
+function SpotlightCard({ spotlight, t, onOpen }) {
+  return (
+    <Card
+      className={styles.contextCard}
+      title={t('today.spotlight')}
+      action={<TextLink onClick={onOpen}>{t('today.change')}</TextLink>}
+    >
+      <button type="button" className={styles.spotlightBody} onClick={onOpen}>
+        <div className={styles.spotlightHead}>
+          <span className={styles.spotlightMark}>
+            <StarMark size={20} color="#fffcf5" />
+          </span>
+          <span>
+            <strong>{spotlight.name}</strong>
+            <small>{spotlight.sub}</small>
+          </span>
+          <Chip tone={spotlight.tone}>{spotlight.toneLabel}</Chip>
+        </div>
+        <div className={styles.spotlightStats}>
+          {spotlight.stats.map((stat, index) => (
+            <span key={`${stat.label}-${index}`}>
+              <strong className="sf-mono" style={{ color: stat.color }}>
+                {stat.value}
+              </strong>
+              <small>{stat.label}</small>
+            </span>
+          ))}
+        </div>
+      </button>
+    </Card>
+  );
+}
+
+function PrintQueue({ jobs, t, onOpen }) {
+  return (
+    <Card
+      className={styles.contextCard}
+      title={t('today.printQueue')}
+      padded={false}
+      action={
+        <TextLink onClick={onOpen}>
+          {jobs.length} {t('today.twoLink')}
+        </TextLink>
+      }
+    >
+      {jobs.map((job) => (
+        <button key={job.id} type="button" className={styles.printRow} onClick={onOpen}>
+          <span className={styles.docThumb}>
+            <Icon name={job.icon} size={17} />
+            <i>×{job.copies}</i>
+          </span>
+          <span className={styles.printCopy}>
+            <strong>{job.doc}</strong>
+            <small>{job.sub}</small>
+            {job.progress != null && <ProgressBar value={job.progress} color="var(--sf-primary)" />}
+            <em>{job.eta}</em>
+          </span>
+          <Chip tone={job.tone}>{job.label}</Chip>
+        </button>
+      ))}
+    </Card>
+  );
+}
+
+function TextLink({ onClick, children }) {
+  return (
+    <button type="button" className={styles.link} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+function normalizePerformance(input) {
+  return {
+    rank: {
+      position: 0,
+      total: 0,
+      score: 0,
+      change: 0,
+      percentile: '',
+      nextGap: 0,
+      ...(input?.rank ?? {}),
+    },
+    attendanceTrend: Array.isArray(input?.attendanceTrend) ? input.attendanceTrend : [],
+    weeklyLoad: Array.isArray(input?.weeklyLoad) ? input.weeklyLoad : [],
+    scoreBreakdown: Array.isArray(input?.scoreBreakdown) ? input.scoreBreakdown : [],
+    groupHealth: Array.isArray(input?.groupHealth) ? input.groupHealth : [],
+    updatedAt: input?.updatedAt ?? '',
+  };
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, Number(value) || 0));
 }

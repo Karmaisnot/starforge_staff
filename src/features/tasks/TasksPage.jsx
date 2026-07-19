@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Avatar, Button, Card, Chip, FilterChip, Icon, Modal, Segmented, ViewSwitcher } from '@/ui';
@@ -351,7 +351,12 @@ function NewTaskModal({ open, onClose, columns, projects, onCreate, presetState 
 
   // Re-seed the column when the modal is opened from a specific Kanban lane.
   useEffect(() => {
-    if (open) setState(presetState ?? 'todo');
+    if (!open) return;
+    setTitle('');
+    setProject('');
+    setPriority('P2');
+    setState(presetState ?? 'todo');
+    setDeadline('');
   }, [open, presetState]);
 
   const submit = (e) => {
@@ -463,6 +468,7 @@ export function TasksPage() {
   const [modal, setModal] = useState(null); // null | { presetState }
   // Bumping this re-runs the loaders so the server truth reconciles after a write.
   const [reloadKey, setReloadKey] = useState(0);
+  const pendingTransitions = useRef(new Set());
   const refetch = () => setReloadKey((k) => k + 1);
 
   const listState = useAsync(() => taskService.getList(), [locale, reloadKey]);
@@ -485,6 +491,8 @@ export function TasksPage() {
 
   // Click cycles a task through the workflow states — optimistic locally, then persisted.
   const cycle = async (task) => {
+    if (pendingTransitions.current.has(task.id)) return;
+    pendingTransitions.current.add(task.id);
     const order = ['todo', 'doing', 'review', 'done'];
     const prev = task.state;
     const next = order[(order.indexOf(prev) + 1) % order.length];
@@ -504,6 +512,8 @@ export function TasksPage() {
       // Roll the optimistic move back and surface the failure.
       setOverrides((o) => ({ ...o, [task.id]: prev }));
       toast(t('common.error'), 'danger');
+    } finally {
+      pendingTransitions.current.delete(task.id);
     }
   };
 

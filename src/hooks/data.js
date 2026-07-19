@@ -129,3 +129,15 @@ export function useMaterialsPage() {
     [locale],
   );
 }
+
+export function useAcademicPage(revision = 0) {
+  const { academic } = useServices();
+  const { locale } = useT();
+  return useAsync(() => academic.getWorkspace(), [locale, revision]);
+}
+
+export function useOperationsPage(revision = 0) {
+  const { operations } = useServices();
+  const { locale } = useT();
+  return useAsync(() => operations.getWorkspace(), [locale, revision]);
+}

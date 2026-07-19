@@ -17,9 +17,15 @@ import {
   IMgmtRepository,
   INotificationRepository,
   IMaterialRepository,
+  IWorkRepository,
+  IFinanceRepository,
+  IPeopleRepository,
+  IAcademicRepository,
+  IOperationsRepository,
 } from '../interfaces.js';
 
 import { teacherFixture } from '@/data/fixtures/teacher.js';
+import { peopleFixture } from '@/data/fixtures/people.js';
 import { cohortsFixture, rosterFixture } from '@/data/fixtures/cohorts.js';
 import { recentCardsFixture, cardTypesFixture, cardStatsFixture } from '@/data/fixtures/cards.js';
 import { tasksFixture, taskColumnsFixture, taskFiltersFixture } from '@/data/fixtures/tasks.js';
@@ -27,6 +33,7 @@ import {
   todayMetaFixture,
   surveyBannerFixture,
   todayStatsFixture,
+  teacherPerformanceFixture,
   heroLessonFixture,
   scheduleFixture,
   aiInsightFixture,
@@ -57,6 +64,10 @@ import {
   materialStatsFixture,
   materialStorageFixture,
 } from '@/data/fixtures/materials.js';
+import { buildWorkFixture } from '@/data/fixtures/work.js';
+import { buildFinanceFixture } from '@/data/fixtures/finance.js';
+import { buildAcademicFixture } from '@/data/fixtures/academic.js';
+import { operationsFixture } from '@/data/fixtures/operations.js';
 
 export class MockAccountRepository extends IAccountRepository {
   #teacher = clone(teacherFixture);
@@ -71,7 +82,30 @@ export class MockAccountRepository extends IAccountRepository {
   ];
 
   getTeacher() {
-    return respond(this.#teacher);
+    // Mock mode can emulate another backend role for deterministic access tests.
+    // This never affects live mode or real authorization.
+    let role = null;
+    try {
+      role = localStorage.getItem('sf-mock-role');
+    } catch {
+      role = null;
+    }
+    const roleNames = {
+      teacher: 'Teacher',
+      accountant: 'Accountant',
+      cashier: 'Cashier',
+      librarian: 'Librarian',
+      security: 'Security',
+      it: 'IT specialist',
+      registrar: 'Registrar',
+      support: 'Support',
+      director: 'Director',
+      head_of_dept: 'Head of department',
+    };
+    const profile = roleNames[role]
+      ? { ...this.#teacher, roleKey: role, role: roleNames[role] }
+      : this.#teacher;
+    return respond(profile);
   }
   updateTeacher(patch) {
     this.#teacher = { ...this.#teacher, ...patch };
@@ -167,6 +201,16 @@ export class MockCardRepository extends ICardRepository {
     this.#cards.unshift(card);
     return respond(card);
   }
+  scan(code) {
+    return respond({
+      scanId: `scan-${Date.now()}`,
+      valid: code.trim().toLowerCase() !== 'revoked',
+      student: 'Akbarov Akmal',
+      cardType: 'Student access',
+      scannedAt: new Date().toISOString(),
+      attendanceLesson: code.trim().toLowerCase() === 'no-lesson' ? null : 'lesson-1',
+    });
+  }
 }
 
 export class MockTaskRepository extends ITaskRepository {
@@ -208,10 +252,57 @@ export class MockTaskRepository extends ITaskRepository {
 
 export class MockDashboardRepository extends IDashboardRepository {
   getToday() {
+    const locale = getLocale();
+    const code = locale === 'ru' ? 'ru-RU' : locale === 'uz' ? 'uz-UZ' : 'en-US';
+    const dateLabel = new Intl.DateTimeFormat(code, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date());
+    let role = null;
+    try {
+      role = localStorage.getItem('sf-mock-role');
+    } catch {
+      role = null;
+    }
+    if (role && role !== 'teacher') {
+      return respond({
+        workspaceMode: 'staff',
+        meta: {
+          ...todayMetaFixture,
+          dateLabel,
+          summary: {
+            uz: '3 ta ochiq vazifa · 2 ta uchrashuv · 1 ta so‘rov',
+            ru: '3 открытые задачи · 2 встречи · 1 запрос',
+            en: '3 open tasks · 2 meetings · 1 request',
+          },
+        },
+        surveyBanner: null,
+        stats: [
+          { value: '3', label: { uz: 'Ochiq vazifalar', ru: 'Открытые задачи', en: 'Open tasks' } },
+          { value: '2', label: { uz: 'Uchrashuvlar', ru: 'Встречи', en: 'Meetings' } },
+          { value: '1', label: { uz: 'Ochiq so‘rovlar', ru: 'Открытые запросы', en: 'Open requests' } },
+          { value: '4', label: { uz: 'O‘qilmagan', ru: 'Непрочитанные', en: 'Unread' } },
+        ],
+        performance: {},
+        heroLesson: { available: false, kind: 'staff', start: '—' },
+        schedule: [],
+        recentCards: [],
+        pendingTasks: pendingTasksFixture,
+        aiInsight: null,
+        printQueue: [],
+        mgmtMention: mgmtMentionFixture,
+        spotlight: null,
+        activity: [],
+      });
+    }
     return respond({
-      meta: todayMetaFixture,
+      workspaceMode: 'teaching',
+      meta: { ...todayMetaFixture, dateLabel },
       surveyBanner: surveyBannerFixture,
       stats: todayStatsFixture,
+      performance: teacherPerformanceFixture,
       heroLesson: heroLessonFixture,
       schedule: scheduleFixture,
       recentCards: recentCardsFixture,
@@ -446,5 +537,142 @@ export class MockMaterialRepository extends IMaterialRepository {
   remove(id) {
     this.#materials = this.#materials.filter((material) => material.id !== id);
     return respond({ id, removed: true });
+  }
+}
+
+export class MockWorkRepository extends IWorkRepository {
+  #workspace = buildWorkFixture();
+
+  getWorkspace() {
+    return respond(this.#workspace);
+  }
+  createRequest(input) {
+    const request = {
+      id: `request-${Date.now()}`,
+      kind: input.kind,
+      title: input.title,
+      description: input.description ?? '',
+      amount: input.amount ?? null,
+      outstanding: input.kind === 'loan' ? (input.amount ?? null) : null,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    this.#workspace.requests.unshift(request);
+    return respond(request);
+  }
+  cancelRequest(id) {
+    const request = this.#workspace.requests.find(
+      (candidate) => String(candidate.id) === String(id),
+    );
+    if (request) request.status = 'cancelled';
+    return respond(request);
+  }
+  respondMeeting(id, response) {
+    const meeting = this.#workspace.meetings.find(
+      (candidate) => String(candidate.id) === String(id),
+    );
+    if (meeting) meeting.response = response;
+    return respond(meeting);
+  }
+  claimCover(id) {
+    const cover = this.#workspace.coverage.find((candidate) => String(candidate.id) === String(id));
+    if (cover) cover.status = 'assigned';
+    return respond(cover);
+  }
+  requestCover(input) {
+    const lesson = this.#workspace.lessons.find(
+      (candidate) => String(candidate.id) === String(input.lessonId),
+    );
+    const cover = {
+      id: `cover-${Date.now()}`,
+      lessonId: input.lessonId,
+      lessonTitle: lesson?.title ?? '',
+      time: lesson?.startsAt ?? new Date().toISOString(),
+      reason: input.reason ?? '',
+      status: 'pending',
+      pool: false,
+    };
+    this.#workspace.coverage.unshift(cover);
+    return respond(cover);
+  }
+}
+
+export class MockFinanceRepository extends IFinanceRepository {
+  #workspace = buildFinanceFixture();
+
+  getWorkspace() {
+    return respond(this.#workspace);
+  }
+  collectCash(input) {
+    const invoice = this.#workspace.invoices.find(
+      (candidate) => String(candidate.id) === String(input.invoiceId),
+    );
+    if (invoice) {
+      invoice.allocated = Math.min(invoice.total, invoice.allocated + Number(input.amount));
+      invoice.status = invoice.allocated >= invoice.total ? 'paid' : 'partial';
+    }
+    const payment = {
+      id: `pay-${Date.now()}`,
+      provider: 'cash',
+      account: invoice?.number ?? String(input.invoiceId),
+      amount: Number(input.amount),
+      status: 'succeeded',
+      paidAt: new Date().toISOString(),
+    };
+    this.#workspace.payments.unshift(payment);
+    return respond(payment);
+  }
+}
+
+export class MockPeopleRepository extends IPeopleRepository {
+  getDirectory() {
+    return respond(peopleFixture);
+  }
+}
+
+export class MockAcademicRepository extends IAcademicRepository {
+  #workspace = buildAcademicFixture();
+
+  getWorkspace() {
+    return respond(this.#workspace);
+  }
+
+  publishAssignment(assignmentId) {
+    const assignment = this.#workspace.assignments.find(
+      (candidate) => String(candidate.id) === String(assignmentId),
+    );
+    if (assignment) assignment.status = 'published';
+    return respond(assignment);
+  }
+
+  publishExam(examId) {
+    const exam = this.#workspace.exams.find(
+      (candidate) => String(candidate.id) === String(examId),
+    );
+    if (exam) exam.published = true;
+    return respond(exam);
+  }
+
+  runReport(reportKey, format = 'pdf') {
+    return respond({
+      id: `report-run-${Date.now()}`,
+      reportKey,
+      format,
+      status: 'queued',
+    });
+  }
+}
+
+export class MockOperationsRepository extends IOperationsRepository {
+  #workspace = clone(operationsFixture);
+
+  getWorkspace() {
+    return respond(this.#workspace);
+  }
+
+  acknowledgeRule(ruleId) {
+    const rule = this.#workspace.rules.find((candidate) => String(candidate.id) === String(ruleId));
+    if (rule) rule.acknowledged = true;
+    return respond(rule);
   }
 }

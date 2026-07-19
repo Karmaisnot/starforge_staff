@@ -8,6 +8,11 @@ import { useTheme } from '@/hooks/useTheme.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { logout } from '@/data/http/authToken.js';
+import {
+  DASHBOARD_WIDGET_KEYS,
+  readDashboardHiddenWidgets,
+  saveDashboardHiddenWidgets,
+} from '@/features/today/dashboardPreferences.js';
 import styles from './settings.module.css';
 
 const LANG_LABELS = { uz: "O'zbekcha", ru: 'Русский', en: 'English' };
@@ -165,11 +170,27 @@ export function SettingsPage() {
   const [toggles, setToggles] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-      return { ...TOGGLE_DEFAULTS, ...(saved || {}) };
+      if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return TOGGLE_DEFAULTS;
+      const valid = {};
+      for (const key of Object.keys(TOGGLE_DEFAULTS)) {
+        if (typeof saved[key] === 'boolean') valid[key] = saved[key];
+      }
+      return { ...TOGGLE_DEFAULTS, ...valid };
     } catch {
       return TOGGLE_DEFAULTS;
     }
   });
+  const [dashboardHidden, setDashboardHidden] = useState(readDashboardHiddenWidgets);
+
+  useEffect(() => {
+    saveDashboardHiddenWidgets(dashboardHidden);
+  }, [dashboardHidden]);
+
+  const flipDashboardWidget = (key) => {
+    const visible = !dashboardHidden[key];
+    setDashboardHidden((current) => ({ ...current, [key]: visible }));
+    toast(`${t(`today.w_${key}`)}: ${visible ? t('settings.off') : t('settings.on')}`);
+  };
 
   // When the backend settings arrive, reconcile the toggle keys over the cached
   // state — the server is the source of truth, localStorage only a first-paint cache.
@@ -331,6 +352,23 @@ export function SettingsPage() {
                 ))}
               </select>
             </div>
+          </Card>
+
+          <Card title={t('settings.dashboardWidgets')} padded={false}>
+            <div className={styles.cardHint}>{t('settings.dashboardWidgetsHint')}</div>
+            {DASHBOARD_WIDGET_KEYS.map((key) => {
+              const visible = !dashboardHidden[key];
+              return (
+                <div key={key} className={styles.row}>
+                  <span>{t(`today.w_${key}`)}</span>
+                  <Toggle
+                    on={visible}
+                    onClick={() => flipDashboardWidget(key)}
+                    label={t(`today.w_${key}`)}
+                  />
+                </div>
+              );
+            })}
           </Card>
 
           <Card title={t('settings.aiLimit')}>

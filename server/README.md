@@ -1,8 +1,10 @@
 # StarForge EDU — backend
 
-Real backend (Fastify + Prisma + SQLite, TypeScript) that replaces the frontend's
-mock repositories. The teacher web app runs against this for **all** reads and writes —
-nothing is demo: lists come from the database, every mutation persists.
+Legacy local Fastify/Prisma service used by the original teacher-only prototype.
+It remains runnable for backend development, but it is **not** the current Staff
+frontend's API: this service exposes `/api/...`, while the supplied production
+backend contract consumed by the app is `/api/v1/...`. Do not point the current
+frontend proxy at port 4000 without an explicit compatibility adapter.
 
 ## Run it
 
@@ -15,20 +17,9 @@ npm run db:seed            # seeds one academy, teacher, cohorts, cards, tasks, 
 npm run dev                # API on http://localhost:4000
 ```
 
-Then start the frontend (repo root):
-
-```bash
-cd ..
-# .env already sets VITE_USE_MOCK=false (use the real backend)
-npm run dev                # app on http://localhost:5173 (proxies /api -> :4000)
-```
-
-Open http://localhost:5173. The app auto-establishes a session with the seeded
-teacher (no login screen needed):
+The standalone API can be exercised with the seeded teacher credentials:
 
 - **username** `nigora.karimova`  **password** `demo1234`
-
-To go back to offline mock data, set `VITE_USE_MOCK=true` in the root `.env`.
 
 ## What's here
 
@@ -61,4 +52,4 @@ To go back to offline mock data, set `VITE_USE_MOCK=true` in the root `.env`.
 
 ## Scripts
 
-`npm run dev | build | start | typecheck | prisma:migrate | db:seed | prisma:reset | test`
+`npm run dev | build | start | typecheck | prisma:migrate | db:seed | prisma:reset`

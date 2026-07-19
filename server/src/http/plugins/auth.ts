@@ -40,7 +40,10 @@ declare module '@fastify/jwt' {
  * opt in via `{ preHandler: [app.authenticate] }`; everything downstream reads
  * the tenant-scoped identity from `request.auth`, never from the client body.
  */
-export const authPlugin = fp<{ config: AppConfig }>(async (app: FastifyInstance, opts) => {
+export const authPlugin = fp<{
+  config: AppConfig;
+  assertSessionActive: (sessionId: string, teacherId: string) => Promise<void>;
+}>(async (app: FastifyInstance, opts) => {
   await app.register(jwt, {
     secret: opts.config.JWT_SECRET,
     sign: { expiresIn: opts.config.JWT_EXPIRES_IN },
@@ -53,6 +56,8 @@ export const authPlugin = fp<{ config: AppConfig }>(async (app: FastifyInstance,
     } catch {
       throw new UnauthorizedError();
     }
+    if (!payload.sub || !payload.academyId || !payload.sid) throw new UnauthorizedError();
+    await opts.assertSessionActive(payload.sid, payload.sub);
     req.auth = {
       teacherId: payload.sub,
       academyId: payload.academyId,

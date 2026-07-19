@@ -9,14 +9,25 @@ import { clearToken, getToken } from './authToken.js';
 export class HttpError extends ApiError {}
 
 const RETRY_DELAYS_MS = [250, 700];
+const INVALID_RESPONSE_MESSAGES = {
+  uz: "Server noto‘g‘ri javob qaytardi. Qayta urinib ko‘ring yoki administratorga murojaat qiling.",
+  ru: 'Сервер вернул некорректный ответ. Повторите попытку или обратитесь к администратору.',
+  en: 'The server returned an invalid response. Please try again or contact your administrator.',
+};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function readPayload(response) {
-  if (response.status === 204) return null;
-  return response.json().catch(() => null);
+  if (response.status === 204) return { payload: null, invalidJson: false };
+  const text = await response.text();
+  if (!text) return { payload: null, invalidJson: false };
+  try {
+    return { payload: JSON.parse(text), invalidJson: false };
+  } catch {
+    return { payload: null, invalidJson: true };
+  }
 }
 
 function unwrapSuccess(payload) {
@@ -75,7 +86,14 @@ async function request(
     },
     normalizedMethod === 'GET' && retry,
   );
-  const payload = await readPayload(response);
+  const { payload, invalidJson } = await readPayload(response);
+
+  if (response.ok && invalidJson) {
+    throw new HttpError(502, normalizedMethod, path, {
+      code: 'invalid_api_response',
+      message: INVALID_RESPONSE_MESSAGES[getLocale()] ?? INVALID_RESPONSE_MESSAGES.en,
+    });
+  }
 
   if (!response.ok || payload?.success === false) {
     const error = new HttpError(
@@ -87,7 +105,7 @@ async function request(
     );
     // There is deliberately no refresh/retry flow for this API. A lost session
     // is terminal and the route guard will take the user back to sign-in.
-    if (error.status === 401 && error.code === 'authentication_failed') clearToken();
+    if (error.status === 401) clearToken();
     throw error;
   }
 

@@ -1,7 +1,7 @@
 import { Link, useMatch, useResolvedPath } from 'react-router-dom';
 import { Icon } from '@/ui';
 import { useT } from '@/hooks/useT.js';
-import { PRIMARY_NAV } from './navConfig.js';
+import { PRIMARY_NAV, visibleNav } from './navConfig.js';
 import styles from './AppShell.module.css';
 
 function Tab({ item, badge }) {
@@ -22,11 +22,11 @@ function Tab({ item, badge }) {
   );
 }
 
-/** @param {{ badges: object }} props */
-export function MobileTabs({ badges = {} }) {
+/** @param {{ badges: object, profile?: object }} props */
+export function MobileTabs({ badges = {}, profile }) {
   return (
     <nav className={styles.tabs}>
-      {PRIMARY_NAV.map((item) => (
+      {visibleNav(PRIMARY_NAV, profile).map((item) => (
         <Tab key={item.id} item={item} badge={badges[item.badge]} />
       ))}
     </nav>

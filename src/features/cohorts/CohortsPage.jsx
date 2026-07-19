@@ -4,120 +4,12 @@ import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { AiBadge, Avatar, Button, Card, Chip, Icon, Modal, StarMark } from '@/ui';
 import { attendanceTone } from '@/domain/models/cohort.js';
-import { useCohorts, useRoster, useTeacher } from '@/hooks/data.js';
+import { useCohorts, useRoster } from '@/hooks/data.js';
 import { useServices } from '@/hooks/useServices.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
 import styles from './cohorts.module.css';
-
-function NewGroupModal({ open, onClose, onCreate, defaultBranch }) {
-  const { t } = useT();
-  const toast = useToast();
-  const [name, setName] = useState('');
-  const [level, setLevel] = useState('');
-  const [branch, setBranch] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
-  useEffect(() => {
-    if (open && !branch && defaultBranch != null) setBranch(String(defaultBranch));
-  }, [branch, defaultBranch, open]);
-
-  const submit = (e) => {
-    e.preventDefault();
-    const branchId = Number(branch);
-    if (
-      !name.trim() ||
-      !Number.isInteger(branchId) ||
-      branchId < 1 ||
-      !startDate ||
-      !endDate ||
-      endDate < startDate
-    ) {
-      toast(t('cohorts.needDetails'), 'danger');
-      return;
-    }
-    onCreate({
-      name: name.trim(),
-      level: level.trim(),
-      branch: branchId,
-      start_date: startDate,
-      end_date: endDate,
-    });
-    setName('');
-    setLevel('');
-    setStartDate('');
-    setEndDate('');
-    onClose();
-  };
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={t('common.newGroup')}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" icon="plus" onClick={submit}>
-            {t('common.newGroup')}
-          </Button>
-        </>
-      }
-    >
-      <form onSubmit={submit} className={styles.gForm}>
-        <label className={styles.gField}>
-          <span>{t('cohorts.tGroup')}</span>
-          <input
-            className={styles.gInput}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoFocus
-          />
-        </label>
-        <label className={styles.gField}>
-          <span>{t('cohorts.tLevel')}</span>
-          <input
-            className={styles.gInput}
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-          />
-        </label>
-        <label className={styles.gField}>
-          <span>{t('cohorts.fBranch')}</span>
-          <input
-            className={styles.gInput}
-            type="number"
-            min="1"
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-          />
-        </label>
-        <label className={styles.gField}>
-          <span>{t('cohorts.fStartDate')}</span>
-          <input
-            className={styles.gInput}
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </label>
-        <label className={styles.gField}>
-          <span>{t('cohorts.fEndDate')}</span>
-          <input
-            className={styles.gInput}
-            type="date"
-            min={startDate || undefined}
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </label>
-      </form>
-    </Modal>
-  );
-}
 
 function AttendanceModal({ open, onClose, cohort, onSave }) {
   const { t } = useT();
@@ -350,14 +242,11 @@ export function CohortsPage() {
 function CohortsView({ reload }) {
   const [selectedId, setSelectedId] = useState(null);
   const state = useCohorts();
-  const { data: teacher } = useTeacher();
   const { cohorts: cohortService } = useServices();
   const toast = useToast();
   const navigate = useNavigate();
   const { t, locale } = useT();
-  const [added, setAdded] = useState([]);
   const [levelFilter, setLevelFilter] = useState(null);
-  const [newOpen, setNewOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   // Optimistic, session-local attendance overrides keyed by cohort id -> percent.
   const [attendanceOverrides, setAttendanceOverrides] = useState({});
@@ -389,47 +278,13 @@ function CohortsView({ reload }) {
     }
   };
 
-  const createGroup = async (draft) => {
-    const id = `g-${Date.now()}`;
-    // Optimistic: insert the new group immediately (e2e checks this).
-    setAdded((list) => [
-      {
-        id,
-        color: 'var(--sf-primary)',
-        studentCount: 0,
-        attendance: 100,
-        up: 0,
-        down: 0,
-        next: '—',
-        ...draft,
-      },
-      ...list,
-    ]);
-    setLevelFilter(null);
-    setSelectedId(id);
-    toast(`+ ${draft.name}`, 'success');
-    try {
-      const created = await cohortService.create(draft);
-      // Server truth now includes this group — clear the local scratch row and
-      // refetch so the persisted record (with its real id) takes over.
-      setAdded((list) => list.filter((c) => c.id !== id));
-      if (created?.id != null) setSelectedId(created.id);
-      reload();
-    } catch {
-      // Roll back the optimistic insert and surface the failure.
-      setAdded((list) => list.filter((c) => c.id !== id));
-      setSelectedId(null);
-      toast(t('common.error'), 'danger');
-    }
-  };
-
   return (
     <AsyncBoundary state={state}>
       {(loaded) => {
         // A teacher can legitimately have no assigned cohorts yet. Treat an
         // unexpected non-array payload as empty too, rather than allowing the
         // detail panel below to dereference an absent selected cohort.
-        const allCohorts = [...added, ...(Array.isArray(loaded) ? loaded : [])];
+        const allCohorts = Array.isArray(loaded) ? loaded : [];
         const totalStudents = allCohorts.reduce(
           (sum, cohort) => sum + Number(cohort.studentCount ?? 0),
           0,
@@ -451,11 +306,6 @@ function CohortsView({ reload }) {
               <PageHeader
                 title={t('cohorts.title')}
                 subtitle={t('cohorts.emptySubtitle')}
-                right={
-                  <Button variant="primary" icon="plus" onClick={() => setNewOpen(true)}>
-                    {t('common.newGroup')}
-                  </Button>
-                }
               />
               <Card className={styles.emptyCard}>
                 <div className={styles.emptyState}>
@@ -464,17 +314,8 @@ function CohortsView({ reload }) {
                   </div>
                   <h2 className={styles.emptyTitle}>{t('cohorts.emptyTitle')}</h2>
                   <p className={styles.emptyBody}>{t('cohorts.emptyBody')}</p>
-                  <Button variant="soft" icon="plus" onClick={() => setNewOpen(true)}>
-                    {t('common.newGroup')}
-                  </Button>
                 </div>
               </Card>
-              <NewGroupModal
-                open={newOpen}
-                onClose={() => setNewOpen(false)}
-                onCreate={createGroup}
-                defaultBranch={teacher?.branchId}
-              />
             </>
           );
         }
@@ -488,9 +329,6 @@ function CohortsView({ reload }) {
                 <>
                   <Button variant="soft" icon="filter" onClick={cycleLevel}>
                     {levelFilter || t('common.filter')}
-                  </Button>
-                  <Button variant="primary" icon="plus" onClick={() => setNewOpen(true)}>
-                    {t('common.newGroup')}
                   </Button>
                 </>
               }
@@ -620,7 +458,14 @@ function CohortsView({ reload }) {
                       <Button variant="cream" icon="check" onClick={() => setAttendanceOpen(true)}>
                         {t('cohorts.takeAttendance')}
                       </Button>
-                      <Button variant="cream-ghost" onClick={() => navigate('/cards')}>
+                      <Button
+                        variant="cream-ghost"
+                        onClick={() =>
+                          navigate('/cards', {
+                            state: { openGiveCard: true, cohortId: cur.id, cohortName: cur.name },
+                          })
+                        }
+                      >
                         {t('cohorts.giveCard')}
                       </Button>
                       <Button
@@ -662,12 +507,6 @@ function CohortsView({ reload }) {
               </div>
             </div>
 
-            <NewGroupModal
-              open={newOpen}
-              onClose={() => setNewOpen(false)}
-              onCreate={createGroup}
-              defaultBranch={teacher?.branchId}
-            />
             <AttendanceModal
               open={attendanceOpen}
               onClose={() => setAttendanceOpen(false)}

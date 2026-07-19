@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { Button, Card, Chip, Icon, Modal, ProgressBar, Segmented } from '@/ui';
@@ -7,12 +7,18 @@ import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
+import { isApiMode } from '@/data/http/apiConfig.js';
 import styles from './surveys.module.css';
 
 function SurveyModal({ survey, onClose, onSubmit }) {
   const { t, locale } = useT();
   const [rating, setRating] = useState('4');
   const [comment, setComment] = useState('');
+  useEffect(() => {
+    if (!survey) return;
+    setRating('4');
+    setComment('');
+  }, [survey]);
   if (!survey) return null;
   return (
     <Modal
@@ -78,6 +84,7 @@ export function SurveysPage() {
   const [viewing, setViewing] = useState(null); // history item shown in read-only results modal
   const [done, setDone] = useState([]); // optimistically-removed active survey ids
   const [extraHistory, setExtraHistory] = useState([]);
+  const writesEnabled = !isApiMode();
 
   const submit = async (survey, answers) => {
     // (a) optimistic local update — instant UI reaction
@@ -226,7 +233,14 @@ export function SurveysPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <Button variant="ghost" icon="x" iconSize={12} onClick={() => skip(s)}>
+                        <Button
+                          variant="ghost"
+                          icon="x"
+                          iconSize={12}
+                          onClick={() => skip(s)}
+                          disabled={!writesEnabled}
+                          title={!writesEnabled ? t('common.actionUnavailable') : undefined}
+                        >
                           {t('surveys.skip')}
                         </Button>
                         <Button
@@ -235,6 +249,8 @@ export function SurveysPage() {
                           iconRight
                           iconSize={12}
                           onClick={() => setOpen(s)}
+                          disabled={!writesEnabled}
+                          title={!writesEnabled ? t('common.actionUnavailable') : undefined}
                         >
                           {s.progress > 0 ? t('surveys.continue') : t('surveys.start')}
                         </Button>

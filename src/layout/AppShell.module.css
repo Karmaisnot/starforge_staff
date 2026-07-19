@@ -6,6 +6,14 @@
   color: var(--sf-ink);
 }
 
+.gate {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  color: var(--sf-ink);
+  background: var(--sf-bg);
+}
+
 /* ── SIDEBAR ─────────────────────────────────────────────── */
 .side {
   background: var(--sf-surface);
@@ -460,8 +468,23 @@
     display: flex;
   }
   .top {
-    padding: 10px 14px;
+    gap: 8px;
+    padding: 10px;
     height: 56px;
+  }
+  .crumb {
+    flex: 1;
+    min-width: 0;
+  }
+  .crumbLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topActions {
+    flex-shrink: 0;
+    gap: 2px;
   }
   .main {
     padding: 18px 14px 80px;

@@ -28,4 +28,7 @@ export class CardService {
   issue(input) {
     return this.cardRepo.issue(input);
   }
+  scan(code) {
+    return this.cardRepo.scan(code);
+  }
 }

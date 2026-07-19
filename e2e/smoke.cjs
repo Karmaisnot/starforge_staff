@@ -1,9 +1,9 @@
 // Live click-through smoke test for the button-wiring work.
-// Runs against the already-running Vite dev server on :5173.
+// Runs against an already-running mock-mode Vite server.
 // Forces locale=en for stable text selectors. Node Playwright (no test runner).
 const { chromium } = require('@playwright/test');
 
-const BASE = 'http://localhost:5173';
+const BASE = process.env.E2E_BASE_URL || 'http://127.0.0.1:4176';
 const results = [];
 const pageErrors = [];
 
@@ -40,21 +40,21 @@ const vis = (loc) => loc.first().waitFor({ state: 'visible', timeout: 8000 });
 
   // 1. App boots
   await check('app-loads', async () => {
-    await open(page, '/today', 'text=Give card');
+    await open(page, '/today', 'text=My performance');
     const n = await page.locator('#root *').count();
     if (n < 100) throw new Error('root nearly empty (' + n + ')');
   });
 
   // 2. Command palette opens via Ctrl+K
   await check('cmdk-opens', async () => {
-    await open(page, '/today', 'text=Give card');
+    await open(page, '/today', 'text=My performance');
     await page.keyboard.press('Control+K');
     await vis(page.getByRole('dialog'));
   });
 
   // 3. Command palette navigates
   await check('cmdk-navigates-to-print', async () => {
-    await open(page, '/today', 'text=Give card');
+    await open(page, '/today', 'text=My performance');
     await page.keyboard.press('Control+K');
     await vis(page.getByRole('dialog'));
     await page.getByRole('dialog').locator('input').fill('print');
@@ -64,27 +64,40 @@ const vis = (loc) => loc.first().waitFor({ state: 'visible', timeout: 8000 });
 
   // 4. Top-bar search button opens the palette
   await check('topbar-search-opens-palette', async () => {
-    await open(page, '/today', 'text=Give card');
+    await open(page, '/today', 'text=My performance');
     await page.getByRole('button', { name: 'Search everything...' }).click();
     await vis(page.getByRole('dialog'));
   });
 
-  // 5. Cards: issuing a card appends it to the recent list
-  await check('cards-issue-appends', async () => {
-    await open(page, '/cards', 'text=Give card');
-    await page.getByRole('button', { name: 'Give card' }).click();
-    await vis(page.getByText('Give a card'));
-    const NAME = 'ZZ Test Pupil';
-    await page.getByPlaceholder('First name Last name').fill(NAME);
-    await page.getByRole('button', { name: 'Give', exact: true }).click();
-    await vis(page.getByText(NAME)); // now present in the recent list
+  // 5. Cards: the overview must not issue cards outside a group.
+  await check('cards-overview-is-read-only', async () => {
+    await open(page, '/cards', 'h1:has-text("Cards")');
+    if (await page.getByRole('button', { name: 'Give card' }).count()) {
+      throw new Error('standalone Give card action is visible');
+    }
   });
 
-  // 6. Cards: a card-type row opens the give modal (preset)
-  await check('cards-type-row-opens-modal', async () => {
-    await open(page, '/cards', 'text=Give card');
-    await page.locator('[class*="type"]').first().click();
-    await vis(page.getByText('Give a card'));
+  // 6. Cards: issuing starts from a group and uses that roster.
+  await check('group-card-flow-opens-modal', async () => {
+    await open(page, '/cohorts', 'button:has-text("Give card")');
+    await page.getByRole('button', { name: 'Give card' }).click();
+    await page.waitForURL('**/cards');
+    const dialog = page.getByRole('dialog');
+    try {
+      await vis(dialog);
+    } catch (error) {
+      const debug = await page.evaluate(() => ({
+        url: location.href,
+        historyState: history.state,
+        dialogs: document.querySelectorAll('[role="dialog"]').length,
+        hasModalTitle: document.body.innerText.includes('Give a card'),
+      }));
+      throw new Error(`card dialog did not open: ${JSON.stringify(debug)}; ${error.message}`);
+    }
+    const student = dialog.getByLabel('Student');
+    if ((await student.evaluate((node) => node.tagName)) !== 'SELECT') {
+      throw new Error('student field is not roster-scoped');
+    }
   });
 
   // 7. AI: sending a message shows the message + a mock AI reply
@@ -118,7 +131,7 @@ const vis = (loc) => loc.first().waitFor({ state: 'visible', timeout: 8000 });
 
   // 9. Today: the pending-task checkbox toggles to pressed
   await check('today-task-checkbox-toggles', async () => {
-    await open(page, '/today', 'text=Give card');
+    await open(page, '/today', 'text=My performance');
     const cb = page.locator('button[aria-label="Toggle status"]').first();
     await cb.click();
     const pressed = await cb.getAttribute('aria-pressed');

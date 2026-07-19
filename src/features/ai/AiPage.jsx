@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/layout/PageHeader.jsx';
 import { AsyncBoundary } from '@/layout/PageState.jsx';
 import { AiBadge, Avatar, Button, Card, Chip, Icon, StarMark } from '@/ui';
@@ -7,10 +6,10 @@ import { useServices } from '@/hooks/useServices.js';
 import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { isApiMode } from '@/data/http/apiConfig.js';
 import styles from './ai.module.css';
 
 export function AiPage() {
-  const navigate = useNavigate();
   const toast = useToast();
   const { t: tt, locale } = useT();
   const { ai } = useServices();
@@ -20,11 +19,12 @@ export function AiPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const refetch = () => setReloadKey((k) => k + 1);
   const state = useAsync(async () => {
-    const [conversations, usage, workspace] = await Promise.all([
-      ai.getConversations(),
-      ai.getUsage(),
-      ai.getWorkspace(),
-    ]);
+    // Load availability-bearing resources in order. The HTTP adapter remembers
+    // when the conversations endpoint returns 503, so the following usage read
+    // deterministically carries that state instead of racing it.
+    const conversations = await ai.getConversations();
+    const usage = await ai.getUsage();
+    const workspace = usage.unavailable ? null : await ai.getWorkspace();
     return {
       conversations,
       usage,
@@ -48,6 +48,7 @@ export function AiPage() {
       {(d) => {
         const conversations = Array.isArray(d?.conversations) ? d.conversations : [];
         const usage = { used: 0, limit: 0, percent: 0, unavailable: false, ...(d?.usage ?? {}) };
+        const chatEnabled = !isApiMode() && !usage.unavailable;
         const workspace = {
           prompts: [],
           context: [],
@@ -75,7 +76,7 @@ export function AiPage() {
         // user line and surface the error.
         const send = async (text) => {
           const value = (text ?? draft).trim();
-          if (!value || !activeId) return;
+          if (!value || !activeId || !chatEnabled) return;
           setDraft('');
           setConvMsgs((m) => ({
             ...m,
@@ -106,7 +107,7 @@ export function AiPage() {
 
         const clearChat = async () => {
           const targetId = activeId;
-          if (!targetId || usage.unavailable) return;
+          if (!targetId || !chatEnabled) return;
           const prev = convMsgs[targetId] ?? [];
           setConvMsgs((m) => ({ ...m, [targetId]: [] }));
           setMenuOpen(false);
@@ -141,32 +142,19 @@ export function AiPage() {
           setMenuOpen(false);
           toast(tt('ai.downloaded'));
         };
+
+        if (usage.unavailable) {
+          return (
+            <>
+              <AiPageHeader tt={tt} usage={usage} />
+              <AiUnavailablePanel tt={tt} status={usage.status} />
+            </>
+          );
+        }
+
         return (
           <>
-            <PageHeader
-              title={
-                <>
-                  {tt('ai.titleA')}{' '}
-                  <span className="sf-serif" style={{ fontWeight: 400 }}>
-                    {tt('ai.titleB')}
-                  </span>
-                </>
-              }
-              subtitle={tt('ai.subtitle')}
-              right={
-                <div className={styles.meter}>
-                  <AiBadge compact>{tt('ai.limit')}</AiBadge>
-                  <div className={styles.meterBar}>
-                    <div style={{ width: `${usage.percent}%` }} />
-                  </div>
-                  <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
-                    {usage.used} / {usage.limit}
-                  </span>
-                </div>
-              }
-            />
-
-            {usage.unavailable && <div className={styles.unavailable}>{tt('ai.unavailable')}</div>}
+            <AiPageHeader tt={tt} usage={usage} />
 
             <div className={styles.layout}>
               {/* List */}
@@ -268,7 +256,7 @@ export function AiPage() {
                               className={styles.menuItem}
                               role="menuitem"
                               onClick={clearChat}
-                              disabled={!activeId || usage.unavailable}
+                              disabled={!activeId || !chatEnabled}
                             >
                               <Icon name="x" size={14} />
                               {tt('ai.menuClear')}
@@ -282,7 +270,12 @@ export function AiPage() {
 
                 <div className={styles.prompts}>
                   {workspace.prompts.map((p) => (
-                    <button key={p} className={styles.prompt} onClick={() => setDraft(p)}>
+                    <button
+                      key={p}
+                      className={styles.prompt}
+                      onClick={() => setDraft(p)}
+                      disabled={!chatEnabled}
+                    >
                       {p}
                     </button>
                   ))}
@@ -294,7 +287,7 @@ export function AiPage() {
                       <div className={styles.out}>{t.outgoing1}</div>
 
                       <div className={styles.inWrap}>
-                        <div className={styles.aiMini}>Ai</div>
+                        <div className={styles.aiMini}>AI</div>
                         <div className={styles.in}>
                           <div>
                             <span className="sf-serif" style={{ fontSize: 16 }}>
@@ -337,13 +330,6 @@ export function AiPage() {
                                     {s.reason}
                                   </div>
                                 </div>
-                                <Button
-                                  variant="soft"
-                                  style={{ padding: '4px 10px', fontSize: 11 }}
-                                  onClick={() => navigate('/cards', { state: { issueTo: s.name } })}
-                                >
-                                  {tt('ai.giveCard')}
-                                </Button>
                               </div>
                             ))}
                           </div>
@@ -361,6 +347,7 @@ export function AiPage() {
                                 icon={a.icon}
                                 iconSize={12}
                                 onClick={() => send(a.label)}
+                                disabled={!chatEnabled}
                               >
                                 {a.label}
                               </Button>
@@ -395,7 +382,7 @@ export function AiPage() {
                   {msgs.map((mm, i) =>
                     mm.role === 'ai' ? (
                       <div key={i} className={styles.inWrap}>
-                        <div className={styles.aiMini}>Ai</div>
+                        <div className={styles.aiMini}>AI</div>
                         <div className={styles.in}>{mm.text}</div>
                       </div>
                     ) : (
@@ -416,10 +403,12 @@ export function AiPage() {
                   <input
                     className={styles.inputField}
                     aria-label={tt('ai.placeholder')}
-                    placeholder={tt('ai.placeholder')}
+                    placeholder={
+                      chatEnabled ? tt('ai.placeholder') : tt('common.actionUnavailable')
+                    }
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    disabled={!activeId || usage.unavailable}
+                    disabled={!activeId || !chatEnabled}
                   />
                   <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
                     {tt('ai.tokenEst')}
@@ -428,7 +417,7 @@ export function AiPage() {
                     type="submit"
                     className={styles.send}
                     aria-label={tt('common.send')}
-                    disabled={!activeId || usage.unavailable}
+                    disabled={!activeId || !chatEnabled}
                   >
                     <Icon name="send" size={16} />
                   </button>
@@ -487,5 +476,88 @@ export function AiPage() {
         );
       }}
     </AsyncBoundary>
+  );
+}
+
+function AiPageHeader({ tt, usage }) {
+  return (
+    <PageHeader
+      title={
+        <>
+          {tt('ai.titleA')}{' '}
+          <span className="sf-serif" style={{ fontWeight: 400 }}>
+            {tt('ai.titleB')}
+          </span>
+        </>
+      }
+      subtitle={tt('ai.subtitle')}
+      right={
+        usage.unavailable ? (
+          <div className={styles.headerUnavailable}>
+            <span className={styles.headerUnavailableDot} aria-hidden="true" />
+            <span>{tt('ai.unavailableStatus')}</span>
+            <span className="sf-mono">HTTP {usage.status ?? 503}</span>
+          </div>
+        ) : (
+          <div className={styles.meter}>
+            <AiBadge compact>{tt('ai.limit')}</AiBadge>
+            <div className={styles.meterBar}>
+              <div style={{ width: `${usage.percent}%` }} />
+            </div>
+            <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
+              {usage.used} / {usage.limit}
+            </span>
+          </div>
+        )
+      }
+    />
+  );
+}
+
+function AiUnavailablePanel({ tt, status }) {
+  return (
+    <section
+      className={styles.unavailablePanel}
+      role="alert"
+      aria-live="assertive"
+      aria-labelledby="ai-unavailable-title"
+    >
+      <div className={styles.unavailableGlow} aria-hidden="true" />
+      <div className={styles.unavailableIcon} aria-hidden="true">
+        <Icon name="ai" size={30} />
+        <span className={styles.unavailableIconMark}>
+          <Icon name="x" size={11} stroke={2.6} />
+        </span>
+      </div>
+      <div className={styles.unavailableContent}>
+        <div className={styles.unavailableEyebrow}>
+          <span className={styles.unavailableDot} aria-hidden="true" />
+          {tt('ai.unavailableStatus')}
+        </div>
+        <h2 id="ai-unavailable-title" className={styles.unavailableTitle}>
+          {tt('ai.unavailableTitle')}
+        </h2>
+        <p className={styles.unavailableBody}>{tt('ai.unavailableBody')}</p>
+
+        <dl className={styles.unavailableDetails}>
+          <div>
+            <dt>{tt('ai.unavailableCodeLabel')}</dt>
+            <dd className="sf-mono">HTTP {status ?? 503}</dd>
+          </div>
+          <div>
+            <dt>{tt('ai.unavailableAccessLabel')}</dt>
+            <dd>{tt('ai.unavailableAccessValue')}</dd>
+          </div>
+        </dl>
+
+        <div className={styles.unavailableHelp}>
+          <Icon name="shield" size={18} />
+          <div>
+            <strong>{tt('ai.unavailableHelpTitle')}</strong>
+            <span>{tt('ai.unavailableHelpBody')}</span>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }

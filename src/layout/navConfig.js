@@ -1,22 +1,119 @@
 // Single source of truth for navigation — consumed by Sidebar, TopBar and MobileTabs.
 // `badge` is the key into the nav-badges map; `urgent` drives the pulsing indicator.
 
+const ALL_STAFF = [
+  'teacher',
+  'accountant',
+  'cashier',
+  'librarian',
+  'security',
+  'it',
+  'registrar',
+  'support',
+];
+const LEARNING_STAFF = ['teacher', 'registrar', 'librarian'];
+
 export const PRIMARY_NAV = [
-  { id: 'today', path: '/today', label: 'Bugun', icon: 'home' },
-  { id: 'cohorts', path: '/cohorts', label: 'Guruhlar', icon: 'cohort' },
-  { id: 'tasks', path: '/tasks', label: 'Vazifalar', icon: 'check', badge: 'tasks' },
-  { id: 'ai', path: '/ai', label: 'AI Suhbat', icon: 'ai' },
-  { id: 'print', path: '/print', label: 'Print', icon: 'print', badge: 'print' },
+  { id: 'today', path: '/today', label: 'Bugun', icon: 'home', roles: ALL_STAFF },
+  { id: 'work', path: '/work', label: 'Ish markazi', icon: 'cal', roles: ALL_STAFF },
+  {
+    id: 'academic',
+    path: '/academic',
+    label: "O'quv markazi",
+    icon: 'book',
+    roles: ['teacher', 'registrar'],
+  },
+  {
+    id: 'finance',
+    path: '/finance',
+    label: 'Moliya',
+    icon: 'pie',
+    roles: ['accountant', 'cashier'],
+  },
+  {
+    id: 'tasks',
+    path: '/tasks',
+    label: 'Vazifalar',
+    icon: 'check',
+    badge: 'tasks',
+    roles: ALL_STAFF,
+  },
+  {
+    id: 'messages',
+    path: '/messages',
+    label: 'Xabarlar',
+    icon: 'chat',
+    badge: 'mgmt',
+    roles: ALL_STAFF,
+  },
+  { id: 'ai', path: '/ai', label: 'AI Suhbat', icon: 'ai', roles: ['teacher'] },
 ];
 
 export const SECONDARY_NAV = [
-  { id: 'cards', path: '/cards', label: 'Kartalar', icon: 'brand' },
-  { id: 'surveys', path: '/surveys', label: "So'rovnomalar", icon: 'flag', badge: 'surveys', urgent: true },
-  { id: 'mgmt', path: '/mgmt', label: 'Boshqaruv', icon: 'shield', badge: 'mgmt' },
-  { id: 'materials', path: '/materials', label: 'Materiallar', icon: 'folder' },
-  { id: 'notifications', path: '/notifications', label: 'Bildirishnomalar', icon: 'bell', badge: 'notif' },
+  { id: 'operations', path: '/operations', label: 'Operatsiyalar', icon: 'globe', roles: ALL_STAFF },
+  { id: 'people', path: '/people', label: 'Odamlar', icon: 'users', roles: ALL_STAFF },
+  { id: 'cohorts', path: '/cohorts', label: 'Guruhlar', icon: 'cohort', roles: LEARNING_STAFF },
+  {
+    id: 'print',
+    path: '/print',
+    label: 'Print',
+    icon: 'print',
+    badge: 'print',
+    roles: ['teacher', 'registrar'],
+  },
+  {
+    id: 'cards',
+    path: '/cards',
+    label: 'Kartalar',
+    icon: 'brand',
+    roles: ['teacher', 'registrar', 'security'],
+  },
+  {
+    id: 'surveys',
+    path: '/surveys',
+    label: "So'rovnomalar",
+    icon: 'flag',
+    badge: 'surveys',
+    urgent: true,
+    roles: ['teacher', 'registrar'],
+  },
+  {
+    id: 'mgmt',
+    path: '/mgmt',
+    label: 'Boshqaruv',
+    icon: 'shield',
+    badge: 'mgmt',
+    roles: ALL_STAFF,
+  },
+  {
+    id: 'materials',
+    path: '/materials',
+    label: 'Materiallar',
+    icon: 'folder',
+    roles: ['teacher', 'librarian'],
+  },
+  {
+    id: 'notifications',
+    path: '/notifications',
+    label: 'Bildirishnomalar',
+    icon: 'bell',
+    badge: 'notif',
+    roles: ALL_STAFF,
+  },
 ];
 
-export const SETTINGS_NAV = { id: 'settings', path: '/settings', label: 'Sozlamalar', icon: 'settings' };
+export const SETTINGS_NAV = {
+  id: 'settings',
+  path: '/settings',
+  label: 'Sozlamalar',
+  icon: 'settings',
+  roles: ALL_STAFF,
+};
 
 export const ALL_NAV = [...PRIMARY_NAV, ...SECONDARY_NAV, SETTINGS_NAV];
+
+export function visibleNav(items, profile) {
+  const role = profile?.roleKey;
+  if (!role) return items;
+  return items.filter((item) => !item.roles || item.roles.includes(role));
+}

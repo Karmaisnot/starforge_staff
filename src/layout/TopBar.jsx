@@ -26,9 +26,11 @@ export function TopBar({ title, teacher, onOpenDrawer, onOpenSearch }) {
         <span className={styles.searchKbd}>⌘K</span>
       </button>
       <div className={styles.topActions}>
-        <button className={styles.topBtn} title={t('nav.ai')} onClick={() => navigate('/ai')}>
-          <Icon name="ai" size={18} />
-        </button>
+        {teacher?.roleKey === 'teacher' && (
+          <button className={styles.topBtn} title={t('nav.ai')} onClick={() => navigate('/ai')}>
+            <Icon name="ai" size={18} />
+          </button>
+        )}
         <button
           className={styles.topBtn}
           title={t('nav.notifications')}

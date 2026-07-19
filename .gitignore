@@ -11,6 +11,7 @@ dist-ssr
 /.thumbnail
 /screenshots/
 /uploads/
+/.playwright-cli/
 
 # local env (keep machine-local; copy from .env.example if added)
 .env

@@ -8,6 +8,7 @@ import { useAsync } from '@/hooks/useAsync.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import { plural } from '@/i18n/plural.js';
+import { isApiMode } from '@/data/http/apiConfig.js';
 import styles from './materials.module.css';
 
 const KIND_ICON = { pdf: 'pdf', video: 'video', doc: 'doc' };
@@ -25,6 +26,7 @@ export function MaterialsPage() {
   const toast = useToast();
   const { t, locale } = useT();
   const { materials } = useServices();
+  const writesEnabled = !isApiMode();
   // A reload nonce gives us a real refetch handle on top of useAsync: bumping it
   // re-runs the loader so server truth replaces the optimistic scratch state.
   const [reloadKey, setReloadKey] = useState(0);
@@ -114,7 +116,9 @@ export function MaterialsPage() {
 
   // Real client-side download of the (placeholder) material payload.
   const download = (file) => {
-    const blob = new Blob([`StarForge EDU · ${file.title}\n${file.meta ?? ''}`], { type: 'text/plain' });
+    const blob = new Blob([`StarForge EDU · ${file.title}\n${file.meta ?? ''}`], {
+      type: 'text/plain',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -131,18 +135,14 @@ export function MaterialsPage() {
             title={t('materials.title')}
             subtitle={`${d.storage.fileCount} ${plural(locale, 'files', d.storage.fileCount)} · ${d.storage.used} / ${d.storage.total}`}
             right={
-              <>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  multiple
-                  hidden
-                  onChange={onPick}
-                />
-                <Button variant="primary" icon="upload" onClick={() => fileRef.current?.click()}>
-                  {t('materials.upload')}
-                </Button>
-              </>
+              writesEnabled ? (
+                <>
+                  <input ref={fileRef} type="file" multiple hidden onChange={onPick} />
+                  <Button variant="primary" icon="upload" onClick={() => fileRef.current?.click()}>
+                    {t('materials.upload')}
+                  </Button>
+                </>
+              ) : null
             }
           />
 
@@ -153,31 +153,48 @@ export function MaterialsPage() {
           </div>
 
           <Card title={t('materials.recent')} padded={false}>
-            {[...uploaded, ...d.list].filter((f) => !removed[f.id]).map((f) => (
-              <div key={f.id} className={styles.row}>
-                <div className={styles.thumb} style={{ background: f.color }}>
-                  <Icon name={KIND_ICON[f.kind] ?? 'doc'} size={22} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span style={{ fontSize: 13.5, fontWeight: 700 }}>{f.title}</span>
-                    {f.aiSummary && <Chip tone="ai">{t('materials.aiSummary')}</Chip>}
+            {[...uploaded, ...d.list]
+              .filter((f) => !removed[f.id])
+              .map((f) => (
+                <div key={f.id} className={styles.row}>
+                  <div className={styles.thumb} style={{ background: f.color }}>
+                    <Icon name={KIND_ICON[f.kind] ?? 'doc'} size={22} />
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--sf-muted)', marginTop: 2 }}>
-                    <span className="sf-mono">{f.meta}</span> · {f.views} {plural(locale, 'views', f.views)} · {f.date}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 700 }}>{f.title}</span>
+                      {f.aiSummary && <Chip tone="ai">{t('materials.aiSummary')}</Chip>}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--sf-muted)', marginTop: 2 }}>
+                      <span className="sf-mono">{f.meta}</span> · {f.views}{' '}
+                      {plural(locale, 'views', f.views)} · {f.date}
+                    </div>
                   </div>
+                  <button
+                    className={styles.iconBtn}
+                    onClick={() => download(f)}
+                    aria-label={t('materials.download')}
+                  >
+                    <Icon name="download" size={16} />
+                  </button>
+                  <button
+                    className={styles.iconBtn}
+                    onClick={() => navigate('/print')}
+                    aria-label={t('print.title')}
+                  >
+                    <Icon name="print" size={16} />
+                  </button>
+                  {writesEnabled && (
+                    <button
+                      className={styles.iconBtn}
+                      onClick={() => removeFile(f)}
+                      aria-label={t('materials.removed')}
+                    >
+                      <Icon name="x" size={16} />
+                    </button>
+                  )}
                 </div>
-                <button className={styles.iconBtn} onClick={() => download(f)} aria-label={t('materials.download')}>
-                  <Icon name="download" size={16} />
-                </button>
-                <button className={styles.iconBtn} onClick={() => navigate('/print')} aria-label={t('print.title')}>
-                  <Icon name="print" size={16} />
-                </button>
-                <button className={styles.iconBtn} onClick={() => removeFile(f)} aria-label={t('materials.removed')}>
-                  <Icon name="x" size={16} />
-                </button>
-              </div>
-            ))}
+              ))}
           </Card>
         </>
       )}

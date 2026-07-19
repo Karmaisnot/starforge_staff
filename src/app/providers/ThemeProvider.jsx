@@ -15,7 +15,12 @@ function readStored() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT;
-    return { ...DEFAULT, ...JSON.parse(raw) };
+    const saved = JSON.parse(raw);
+    const palettes = Object.values(Palette);
+    return {
+      palette: palettes.includes(saved?.palette) ? saved.palette : DEFAULT.palette,
+      dark: typeof saved?.dark === 'boolean' ? saved.dark : DEFAULT.dark,
+    };
   } catch {
     return DEFAULT;
   }

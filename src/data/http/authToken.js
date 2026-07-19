@@ -7,7 +7,11 @@ import { ApiError } from './apiError.js';
 const STORAGE_KEY = 'sf-session-access';
 const DEVICE_KEY = 'sf-device-id';
 const AUTH_EVENT = 'sf:auth-changed';
-const LOGIN_PATH = import.meta.env?.VITE_AUTH_ENDPOINT === 'role-login' ? 'auth/role-login/' : 'auth/login/';
+// Staff, teacher, student, and parent credentials are role-native on the current
+// backend. Keep the old bridge login available only as an explicit compatibility
+// override instead of silently sending every role account to the wrong endpoint.
+const AUTH_ENDPOINT = import.meta.env?.VITE_AUTH_ENDPOINT || 'role-login';
+const LOGIN_PATH = AUTH_ENDPOINT === 'legacy-login' ? 'auth/login/' : 'auth/role-login/';
 
 let token = readStorage(STORAGE_KEY);
 

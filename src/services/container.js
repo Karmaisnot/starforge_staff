@@ -13,6 +13,11 @@ import {
   MockMgmtRepository,
   MockNotificationRepository,
   MockMaterialRepository,
+  MockWorkRepository,
+  MockFinanceRepository,
+  MockPeopleRepository,
+  MockAcademicRepository,
+  MockOperationsRepository,
 } from '@/data/repositories/mock/index.js';
 import {
   HttpAccountRepository,
@@ -27,6 +32,11 @@ import {
   HttpNotificationRepository,
   HttpMaterialRepository,
   HttpNavigationRepository,
+  HttpWorkRepository,
+  HttpFinanceRepository,
+  HttpPeopleRepository,
+  HttpAcademicRepository,
+  HttpOperationsRepository,
 } from '@/data/repositories/http/index.js';
 
 import { AccountService } from './AccountService.js';
@@ -41,6 +51,11 @@ import { MgmtService } from './MgmtService.js';
 import { NotificationService } from './NotificationService.js';
 import { MaterialService } from './MaterialService.js';
 import { NavigationService } from './NavigationService.js';
+import { WorkService } from './WorkService.js';
+import { FinanceService } from './FinanceService.js';
+import { PeopleService } from './PeopleService.js';
+import { AcademicService } from './AcademicService.js';
+import { OperationsService } from './OperationsService.js';
 
 const USE_MOCK = import.meta.env?.VITE_USE_MOCK !== 'false';
 
@@ -58,6 +73,11 @@ function buildRepositories() {
       mgmtRepo: new MockMgmtRepository(),
       notificationRepo: new MockNotificationRepository(),
       materialRepo: new MockMaterialRepository(),
+      workRepo: new MockWorkRepository(),
+      financeRepo: new MockFinanceRepository(),
+      peopleRepo: new MockPeopleRepository(),
+      academicRepo: new MockAcademicRepository(),
+      operationsRepo: new MockOperationsRepository(),
       navRepo: null, // mock mode: NavigationService falls back to the fixture
     };
   }
@@ -73,6 +93,11 @@ function buildRepositories() {
     mgmtRepo: new HttpMgmtRepository(),
     notificationRepo: new HttpNotificationRepository(),
     materialRepo: new HttpMaterialRepository(),
+    workRepo: new HttpWorkRepository(),
+    financeRepo: new HttpFinanceRepository(),
+    peopleRepo: new HttpPeopleRepository(),
+    academicRepo: new HttpAcademicRepository(),
+    operationsRepo: new HttpOperationsRepository(),
     navRepo: new HttpNavigationRepository(),
   };
 }
@@ -93,6 +118,11 @@ export function createContainer() {
     notifications: new NotificationService(repos),
     materials: new MaterialService(repos),
     navigation: new NavigationService(repos.navRepo),
+    work: new WorkService(repos),
+    finance: new FinanceService(repos),
+    people: new PeopleService(repos),
+    academic: new AcademicService(repos),
+    operations: new OperationsService(repos),
   };
 }
 

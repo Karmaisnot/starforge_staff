@@ -15,10 +15,30 @@ export function Modal({ open, title, onClose, children, footer }) {
   const { t } = useT();
   const titleId = useId();
   const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const previouslyFocusedRef = useRef(null);
+  onCloseRef.current = onClose;
+
+  // React applies a child's `autoFocus` during the same commit that opens the
+  // dialog, before effects run. Remember focus while closed so restoration
+  // still targets the real trigger rather than the newly-focused form field.
+  useEffect(() => {
+    if (open) return undefined;
+    const remember = (event) => {
+      const insideDialog =
+        event.target instanceof Element && event.target.closest('[role="dialog"]');
+      if (!insideDialog) previouslyFocusedRef.current = event.target;
+    };
+    if (!dialogRef.current?.contains(document.activeElement)) {
+      previouslyFocusedRef.current = document.activeElement;
+    }
+    document.addEventListener('focusin', remember);
+    return () => document.removeEventListener('focusin', remember);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
-    const previouslyFocused = document.activeElement;
+    const previouslyFocused = previouslyFocusedRef.current;
     const dialog = dialogRef.current;
     const focusables = () => (dialog ? [...dialog.querySelectorAll(FOCUSABLE)] : []);
 
@@ -28,7 +48,7 @@ export function Modal({ open, title, onClose, children, footer }) {
 
     const onKey = (e) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -56,7 +76,7 @@ export function Modal({ open, title, onClose, children, footer }) {
         previouslyFocused.focus();
       }
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (

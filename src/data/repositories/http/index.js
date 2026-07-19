@@ -16,6 +16,11 @@ import {
   IMgmtRepository,
   INotificationRepository,
   IMaterialRepository,
+  IWorkRepository,
+  IFinanceRepository,
+  IPeopleRepository,
+  IAcademicRepository,
+  IOperationsRepository,
 } from '../interfaces.js';
 
 const UI_TASK_COLUMNS = [
@@ -39,10 +44,16 @@ const COPY = {
     branch: 'Filial',
     group: 'guruh',
     student: 'o‘quvchi',
+    parent: 'ota-ona',
     lesson: 'dars',
     pending: 'kutilmoqda',
+    openTasks: 'Ochiq vazifalar',
+    meetings: 'uchrashuvlar',
+    openRequests: 'Ochiq so‘rovlar',
+    unread: 'O‘qilmagan',
     noLessons: 'Rejalashtirilgan dars yo‘q',
     nextLesson: 'Keyingi dars',
+    nextMeeting: 'Keyingi uchrashuv',
     noForms: 'Kutilayotgan so‘rovnomalar yo‘q',
     aiRequest: 'AI so‘rovi',
     thread: 'Suhbat',
@@ -63,10 +74,16 @@ const COPY = {
     branch: 'Филиал',
     group: 'групп',
     student: 'учеников',
+    parent: 'родитель',
     lesson: 'уроков',
     pending: 'ожидают',
+    openTasks: 'Открытые задачи',
+    meetings: 'встреч',
+    openRequests: 'Открытые заявки',
+    unread: 'Непрочитано',
     noLessons: 'Запланированных уроков нет',
     nextLesson: 'Следующий урок',
+    nextMeeting: 'Следующая встреча',
     noForms: 'Нет ожидающих опросов',
     aiRequest: 'AI-запрос',
     thread: 'Диалог',
@@ -87,10 +104,16 @@ const COPY = {
     branch: 'Branch',
     group: 'groups',
     student: 'students',
+    parent: 'parent',
     lesson: 'lessons',
     pending: 'pending',
+    openTasks: 'Open tasks',
+    meetings: 'meetings',
+    openRequests: 'Open requests',
+    unread: 'Unread',
     noLessons: 'No lessons are scheduled',
     nextLesson: 'Next lesson',
+    nextMeeting: 'Next meeting',
     noForms: 'No forms are waiting',
     aiRequest: 'AI request',
     thread: 'Thread',
@@ -183,7 +206,8 @@ async function optional(load, fallback) {
     // A missing session must still reach SessionGate. Other optional panels can
     // remain empty when a role lacks a capability such as printing:read.
     if (error?.status === 401) throw error;
-    return fallback;
+    if (error?.status === 403 || error?.status === 404) return fallback;
+    throw error;
   }
 }
 
@@ -213,8 +237,11 @@ function mapTeacher(user) {
     // /users/me/ intentionally does not permit username changes.
     usernameEditable: false,
     role,
+    roleKey: membership.role ?? membership.account_type_slug ?? membership.account_kind ?? 'staff',
+    accountKind: membership.account_kind ?? 'staff',
     branchId: membership.branch ?? null,
     branch: membership.branch ? `${copy().branch} #${membership.branch}` : '—',
+    preferredLanguage: user?.preferred_language ?? null,
     subjects: [],
   };
 }
@@ -628,19 +655,33 @@ export class HttpCohortRepository extends ICohortRepository {
     return this.#details(created);
   }
 
-  async saveAttendance(_cohortId, entries) {
-    const lessonId = entries?.lessonId;
-    if (!lessonId) {
+  async saveAttendance(cohortId, entries) {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+    const lessons = asList(
+      await httpClient.get(
+        `schedule/lessons/?cohort=${encodeURIComponent(cohortId)}&date_from=${encodeURIComponent(start.toISOString())}&date_to=${encodeURIComponent(end.toISOString())}&page_size=20`,
+      ),
+    ).filter((lesson) => lesson.status !== 'cancelled');
+    const now = Date.now();
+    const lesson = lessons.sort((a, b) => {
+      const aMid = (new Date(a.starts_at).getTime() + new Date(a.ends_at).getTime()) / 2;
+      const bMid = (new Date(b.starts_at).getTime() + new Date(b.ends_at).getTime()) / 2;
+      return Math.abs(aMid - now) - Math.abs(bMid - now);
+    })[0];
+    if (!lesson) {
       throw clientContractError(
         'attendance/lessons/{lesson_id}/mark/',
-        'Attendance is recorded against a scheduled lesson, not a cohort. Select the lesson before saving attendance.',
+        'Attendance can only be recorded when this group has a scheduled lesson today.',
       );
     }
     const payload = asList(entries).map((entry) => ({
       student: Number(entry.studentId),
       status: entry.present ? 'present' : 'absent',
     }));
-    return httpClient.post(`attendance/lessons/${lessonId}/mark/`, payload);
+    return httpClient.post(`attendance/lessons/${lesson.id}/mark/`, payload);
   }
 }
 
@@ -732,6 +773,18 @@ export class HttpCardRepository extends ICardRepository {
     this.#snapshot = null;
     return created;
   }
+
+  async scan(code) {
+    const result = await httpClient.post('cards/scan/', { code: String(code ?? '').trim() });
+    return {
+      scanId: String(result.scan_id),
+      valid: Boolean(result.valid),
+      student: result.student_name || `${copy().student} #${result.student}`,
+      cardType: result.card_type || '',
+      scannedAt: result.scanned_at,
+      attendanceLesson: result.attendance_lesson,
+    };
+  }
 }
 
 export class HttpTaskRepository extends ITaskRepository {
@@ -775,9 +828,12 @@ export class HttpTaskRepository extends ITaskRepository {
 
 export class HttpDashboardRepository extends IDashboardRepository {
   async getToday() {
-    const [me, rawTasks] = await Promise.all([
+    const [me, rawTasks, rawMeetings, rawRequests, rawUnread] = await Promise.all([
       optional(() => httpClient.get('users/me/'), null),
       optional(() => httpClient.get('tasks/mine/?page_size=5'), []),
+      optional(() => httpClient.get('meetings/upcoming/?page_size=20'), []),
+      optional(() => httpClient.get('approvals/requests/?page_size=20'), []),
+      optional(() => httpClient.get('notifications/unread-count/'), { count: 0 }),
     ]);
     // This endpoint is only installed for teacher account types. Staff such as a
     // Director receive a lean but complete dashboard instead of a 404 page.
@@ -793,6 +849,8 @@ export class HttpDashboardRepository extends IDashboardRepository {
     const groups = toNumber(dashboard.groups_count);
     const students = toNumber(dashboard.students_count);
     const meeting = dashboard.next_meeting;
+    const staffMeeting = asList(rawMeetings)[0] ?? null;
+    const teacherMode = hasTeacherMembership(me);
     const name = displayName(me).split(' ')[0] || '';
     return {
       meta: {
@@ -803,7 +861,9 @@ export class HttpDashboardRepository extends IDashboardRepository {
           year: 'numeric',
         }),
         greetingName: name,
-        summary: `${groups} ${copy().group} · ${lessons.length} ${copy().lesson} · ${students} ${copy().student}`,
+        summary: teacherMode
+          ? `${groups} ${copy().group} · ${lessons.length} ${copy().lesson} · ${students} ${copy().student}`
+          : `${tasks.length} ${copy().openTasks} · ${asList(rawMeetings).length} ${copy().meetings} · ${asList(rawRequests).filter((request) => request.status === 'pending').length} ${copy().pending}`,
       },
       surveyBanner: form
         ? {
@@ -812,14 +872,68 @@ export class HttpDashboardRepository extends IDashboardRepository {
             meta: `${toNumber(form.questions, 0)} ${copy().pending}`,
           }
         : null,
-      stats: [
-        { value: String(groups), label: copy().group },
-        { value: String(students), label: copy().student, color: 'var(--sf-success)' },
-        { value: String(lessons.length), label: copy().lesson, color: 'var(--sf-primary)' },
-        { value: String(tasks.length), label: copy().pending, color: 'var(--sf-accent)' },
-      ],
+      stats: teacherMode
+        ? [
+            { value: String(groups), label: copy().group },
+            { value: String(students), label: copy().student, color: 'var(--sf-success)' },
+            { value: String(lessons.length), label: copy().lesson, color: 'var(--sf-primary)' },
+            { value: String(tasks.length), label: copy().openTasks, color: 'var(--sf-accent)' },
+          ]
+        : [
+            { value: String(tasks.length), label: copy().openTasks, color: 'var(--sf-primary)' },
+            {
+              value: String(asList(rawMeetings).length),
+              label: copy().meetings,
+              color: 'var(--sf-success)',
+            },
+            {
+              value: String(
+                asList(rawRequests).filter((request) => request.status === 'pending').length,
+              ),
+              label: copy().openRequests,
+              color: 'var(--sf-accent)',
+            },
+            {
+              value: String(toNumber(rawUnread?.count)),
+              label: copy().unread,
+              color: 'var(--sf-warn)',
+            },
+          ],
+      workspaceMode: teacherMode ? 'teaching' : 'staff',
+      performance: {
+        rank: {
+          position: toNumber(dashboard.teacher_rank?.position),
+          total: toNumber(dashboard.teacher_rank?.total),
+          score: toNumber(dashboard.teacher_rank?.score),
+          change: toNumber(dashboard.teacher_rank?.change),
+          percentile: dashboard.teacher_rank?.percentile ?? '',
+          nextGap: toNumber(dashboard.teacher_rank?.next_gap),
+        },
+        attendanceTrend: asList(dashboard.attendance_trend).map((point) => ({
+          label: String(point.label ?? point.date ?? ''),
+          value: toNumber(point.value ?? point.attendance),
+        })),
+        weeklyLoad: asList(dashboard.weekly_load).map((point) => ({
+          label: String(point.label ?? point.day ?? ''),
+          value: toNumber(point.value ?? point.lessons),
+        })),
+        scoreBreakdown: asList(dashboard.score_breakdown).map((metric) => ({
+          label: String(metric.label ?? ''),
+          value: toNumber(metric.value),
+          target: toNumber(metric.target),
+        })),
+        groupHealth: asList(dashboard.group_health).map((group) => ({
+          name: String(group.name ?? ''),
+          attendance: toNumber(group.attendance),
+          up: toNumber(group.up_cards),
+          down: toNumber(group.down_cards),
+        })),
+        updatedAt: dashboard.updated_at ? formatTime(dashboard.updated_at) : '',
+      },
       heroLesson: next
         ? {
+            available: true,
+            kind: 'lesson',
             eyebrow: copy().nextLesson,
             title: next.title || next.cohort || copy().nextLesson,
             titleAccent: next.cohort || '',
@@ -827,14 +941,27 @@ export class HttpDashboardRepository extends IDashboardRepository {
             start: formatTime(next.starts_at),
             end: next.ends_at ? `– ${formatTime(next.ends_at)}` : '',
           }
-        : {
-            eyebrow: copy().nextLesson,
-            title: copy().noLessons,
-            titleAccent: '',
-            sub: '',
-            start: '—',
-            end: '',
-          },
+        : staffMeeting && !teacherMode
+          ? {
+              available: true,
+              kind: 'meeting',
+              eyebrow: copy().nextMeeting,
+              title: staffMeeting.title || copy().thread,
+              titleAccent: '',
+              sub: staffMeeting.location || '',
+              start: formatTime(staffMeeting.starts_at),
+              end: staffMeeting.ends_at ? `– ${formatTime(staffMeeting.ends_at)}` : '',
+            }
+          : {
+              available: false,
+              kind: teacherMode ? 'lesson' : 'staff',
+              eyebrow: copy().nextLesson,
+              title: copy().noLessons,
+              titleAccent: '',
+              sub: '',
+              start: '—',
+              end: '',
+            },
       schedule: lessons.map((lesson, index) => ({
         time: formatTime(lesson.starts_at),
         label: lesson.title || lesson.cohort || copy().nextLesson,
@@ -850,12 +977,12 @@ export class HttpDashboardRepository extends IDashboardRepository {
         chips: [],
       },
       printQueue: [],
-      mgmtMention: meeting
+      mgmtMention: (teacherMode ? meeting : staffMeeting)
         ? {
-            name: meeting.title || copy().thread,
-            role: copy().nextLesson,
-            message: meeting.location || '',
-            time: formatTime(meeting.starts_at),
+            name: (teacherMode ? meeting : staffMeeting).title || copy().thread,
+            role: teacherMode ? copy().nextLesson : copy().meetings,
+            message: (teacherMode ? meeting : staffMeeting).location || '',
+            time: formatTime((teacherMode ? meeting : staffMeeting).starts_at),
           }
         : { name: copy().thread, role: '', message: '', time: '' },
       spotlight: {
@@ -873,12 +1000,14 @@ export class HttpDashboardRepository extends IDashboardRepository {
 export class HttpAiRepository extends IAiRepository {
   #unavailable = false;
 
+  #unavailableStatus = 503;
+
   #conversationsRequest = null;
 
   #usageRequest = null;
 
   #fallbackUsage() {
-    return { used: 0, limit: 0, unavailable: true };
+    return { used: 0, limit: 0, unavailable: true, status: this.#unavailableStatus };
   }
 
   #markUnavailable(error) {
@@ -886,6 +1015,7 @@ export class HttpAiRepository extends IAiRepository {
     // provider should not take down the rest of the teacher workspace.
     if (error?.status === 401) throw error;
     this.#unavailable = true;
+    this.#unavailableStatus = Number.isInteger(error?.status) ? error.status : 503;
   }
 
   async listConversations() {
@@ -1140,6 +1270,638 @@ export class HttpMaterialRepository extends IMaterialRepository {
       'content/files/{id}/',
       'The supplied API does not expose file deletion from this screen.',
     );
+  }
+}
+
+async function capability(load) {
+  try {
+    return { available: true, data: await load() };
+  } catch (error) {
+    if (error?.status === 401) throw error;
+    if (error?.status === 403 || error?.status === 404) {
+      return { available: false, data: [] };
+    }
+    throw error;
+  }
+}
+
+function workWindow() {
+  const from = new Date();
+  const weekday = from.getDay() || 7;
+  from.setDate(from.getDate() - weekday - 13);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setDate(to.getDate() + 42);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function mapWorkLesson(lesson, index = 0) {
+  const colors = ['var(--sf-primary)', 'var(--sf-accent)', 'var(--sf-success)'];
+  return {
+    id: String(lesson.id),
+    title: lesson.title || lesson.lesson_type_name || copy().nextLesson,
+    cohort: lesson.cohort_name || '',
+    type: lesson.lesson_type_name || copy().lesson,
+    room: lesson.room_name || '',
+    startsAt: lesson.starts_at,
+    endsAt: lesson.ends_at,
+    status: lesson.status || 'scheduled',
+    color: colors[index % colors.length],
+  };
+}
+
+function mapWorkMeeting(meeting, currentUserId) {
+  const attendee = asList(meeting.attendees).find(
+    (item) => String(item.user) === String(currentUserId),
+  );
+  return {
+    id: String(meeting.id),
+    title: meeting.title || '',
+    agenda: meeting.agenda || '',
+    location: meeting.location || '',
+    startsAt: meeting.starts_at,
+    endsAt: meeting.ends_at,
+    status: meeting.status || 'scheduled',
+    response: attendee?.response || 'pending',
+  };
+}
+
+function mapWorkRequest(request) {
+  return {
+    id: String(request.id),
+    kind: request.kind || 'other',
+    title: request.title || '',
+    description: request.description || '',
+    amount: request.amount_uzs == null ? null : toNumber(request.amount_uzs),
+    outstanding: request.outstanding_uzs == null ? null : toNumber(request.outstanding_uzs),
+    status: request.status || 'pending',
+    createdAt: request.created_at,
+  };
+}
+
+function mapWorkCover(cover, lessonsById) {
+  const lesson = lessonsById.get(String(cover.lesson));
+  return {
+    id: String(cover.id),
+    lessonId: String(cover.lesson),
+    lessonTitle: lesson?.title || `${copy().lesson} #${cover.lesson}`,
+    time: lesson?.startsAt || cover.created_at,
+    reason: cover.reason || '',
+    status: cover.status || 'pending',
+    pool: Boolean(cover.pool),
+  };
+}
+
+export class HttpWorkRepository extends IWorkRepository {
+  #currentUserId = null;
+
+  async #me() {
+    const me = await httpClient.get('users/me/');
+    this.#currentUserId = me.id;
+    return me;
+  }
+
+  async getWorkspace() {
+    const { from, to } = workWindow();
+    const [me, schedule, meetings, requests, loans, covers, pool] = await Promise.all([
+      this.#me(),
+      capability(() =>
+        httpClient.get(
+          `schedule/lessons/?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}&page_size=200`,
+        ),
+      ),
+      capability(() => httpClient.get('meetings/upcoming/?page_size=100')),
+      capability(() => httpClient.get('approvals/requests/?page_size=100')),
+      capability(() => httpClient.get('loans/?page_size=100')),
+      capability(() => httpClient.get('cover/?page_size=100')),
+      capability(() => httpClient.get('cover/pool/?page_size=100')),
+    ]);
+    const lessons = asList(schedule.data).map(mapWorkLesson);
+    const lessonsById = new Map(lessons.map((lesson) => [String(lesson.id), lesson]));
+    const requestMap = new Map(
+      [...asList(requests.data), ...asList(loans.data)].map((request) => [
+        String(request.id),
+        mapWorkRequest(request),
+      ]),
+    );
+    const coverMap = new Map(
+      [...asList(covers.data), ...asList(pool.data)].map((cover) => [
+        String(cover.id),
+        mapWorkCover(cover, lessonsById),
+      ]),
+    );
+    return {
+      profile: mapTeacher(me),
+      capabilities: {
+        schedule: schedule.available,
+        meetings: meetings.available,
+        requests: requests.available,
+        loans: loans.available,
+        cover: covers.available || pool.available,
+      },
+      lessons,
+      meetings: asList(meetings.data).map((meeting) =>
+        mapWorkMeeting(meeting, this.#currentUserId),
+      ),
+      requests: [...requestMap.values()],
+      coverage: [...coverMap.values()],
+    };
+  }
+
+  async createRequest(input) {
+    if (input.kind === 'loan') {
+      return mapWorkRequest(
+        await httpClient.post('loans/', {
+          title: input.title,
+          description: input.description || '',
+          amount_uzs: input.amount,
+        }),
+      );
+    }
+    return mapWorkRequest(
+      await httpClient.post('approvals/requests/', {
+        kind: input.kind,
+        title: input.title,
+        description: input.description || '',
+        amount_uzs: input.amount || null,
+        payload: {},
+      }),
+    );
+  }
+
+  async cancelRequest(id) {
+    return mapWorkRequest(await httpClient.post(`approvals/requests/${id}/cancel/`, {}));
+  }
+
+  async respondMeeting(id, response) {
+    return mapWorkMeeting(
+      await httpClient.post(`meetings/${id}/respond/`, { response }),
+      this.#currentUserId,
+    );
+  }
+
+  async claimCover(id) {
+    return httpClient.post(`cover/${id}/claim/`, {});
+  }
+
+  async requestCover(input) {
+    return httpClient.post('cover/', {
+      lesson: Number(input.lessonId),
+      reason: input.reason || '',
+    });
+  }
+}
+
+function mapFinanceInvoice(invoice) {
+  return {
+    id: String(invoice.id),
+    number: invoice.number || `#${invoice.id}`,
+    student: invoice.student_name || `${copy().student} #${invoice.student}`,
+    cohort: invoice.cohort_name || '',
+    total: toNumber(invoice.total_uzs),
+    allocated: asList(invoice.allocations).reduce(
+      (sum, allocation) => sum + toNumber(allocation.amount_uzs),
+      0,
+    ),
+    status: invoice.status || 'issued',
+    dueDate: invoice.due_date,
+  };
+}
+
+function mapFinancePayment(payment) {
+  return {
+    id: String(payment.id),
+    provider: payment.provider || '',
+    account: payment.account_ref || '',
+    amount: toNumber(payment.amount_uzs),
+    status: payment.status || 'pending',
+    paidAt: payment.paid_at || payment.created_at,
+  };
+}
+
+function mapFinanceExpense(expense) {
+  return {
+    id: String(expense.id),
+    category: expense.category || '',
+    description: expense.description || '',
+    amount: toNumber(expense.amount_uzs),
+    status: expense.status || 'pending',
+    createdAt: expense.created_at,
+  };
+}
+
+function mapFinanceShift(shift) {
+  return {
+    id: String(shift.id),
+    cashier: shift.cashier_name || '',
+    branch: shift.branch_name || '',
+    status: shift.status || 'open',
+    openedAt: shift.opened_at,
+    openingCash: toNumber(shift.opening_cash_uzs),
+    closingCash: shift.closing_cash_uzs == null ? null : toNumber(shift.closing_cash_uzs),
+    discrepancy: shift.discrepancy_uzs == null ? null : toNumber(shift.discrepancy_uzs),
+  };
+}
+
+export class HttpFinanceRepository extends IFinanceRepository {
+  async getWorkspace() {
+    const [me, invoices, payments, expenses, shifts] = await Promise.all([
+      httpClient.get('users/me/'),
+      capability(() => httpClient.get('finance/invoices/?page_size=100&ordering=-created_at')),
+      capability(() => httpClient.get('payments/?page_size=100&ordering=-created_at')),
+      capability(() => httpClient.get('finance/expenses/?page_size=100&ordering=-created_at')),
+      capability(() => httpClient.get('finance/cashier-shifts/?page_size=30&ordering=-opened_at')),
+    ]);
+    const profile = mapTeacher(me);
+    return {
+      profile,
+      capabilities: {
+        invoices: invoices.available,
+        payments: payments.available,
+        expenses: expenses.available,
+        shifts: shifts.available,
+        collectCash: ['accountant', 'cashier'].includes(profile.roleKey),
+      },
+      invoices: asList(invoices.data).map(mapFinanceInvoice),
+      payments: asList(payments.data).map(mapFinancePayment),
+      expenses: asList(expenses.data).map(mapFinanceExpense),
+      shifts: asList(shifts.data).map(mapFinanceShift),
+    };
+  }
+
+  async collectCash(input) {
+    const key = globalThis.crypto?.randomUUID?.() ?? `cash-${Date.now()}`;
+    return mapFinancePayment(
+      await httpClient.post(
+        'payments/cash/',
+        { invoice: Number(input.invoiceId), amount_uzs: Number(input.amount) },
+        { headers: { 'Idempotency-Key': key } },
+      ),
+    );
+  }
+}
+
+function mapDirectoryPerson(person, kind) {
+  const membership = asList(person.role_memberships)[0] ?? {};
+  const roleKey =
+    kind === 'student'
+      ? 'student'
+      : kind === 'parent'
+        ? 'parent'
+      : kind === 'teacher'
+        ? 'teacher'
+        : membership.role || membership.account_type_slug || membership.account_kind || 'staff';
+  const roleName =
+    kind === 'student'
+      ? copy().student
+      : kind === 'parent'
+        ? copy().parent
+      : kind === 'teacher'
+        ? copy().teacher
+        : membership.account_type_name || String(roleKey).replaceAll('_', ' ');
+  return {
+    id: `${kind}-${person.id}`,
+    sourceId: person.id,
+    kind,
+    name: displayName(person),
+    role: roleName,
+    roleKey,
+    department: person.department_name || person.department || person.workplace || '',
+    branch:
+      person.branch_name || (membership.branch ? `${copy().branch} #${membership.branch}` : ''),
+    phone: person.phone || person.phone_number || '',
+    email: person.email || '',
+    active: person.active ?? person.is_active ?? person.status === 'active',
+    lastSeen: person.last_login_at || person.last_login || null,
+    subjects: asList(person.subjects)
+      .map((subject) => subject.name || subject.title || subject)
+      .join(' · '),
+    studentId: person.student_id || person.public_id || '',
+    cohort:
+      person.current_cohort_name ||
+      person.cohort_name ||
+      (person.current_cohort ? `#${person.current_cohort}` : ''),
+    level: person.academic_level || '',
+    blocked: Boolean(person.blocked || person.is_blocked),
+  };
+}
+
+export class HttpPeopleRepository extends IPeopleRepository {
+  async getDirectory() {
+    const [staff, teachers, students, parents] = await Promise.all([
+      capability(() => httpClient.get('org/staff/?page_size=100&ordering=first_name')),
+      capability(() => httpClient.get('teachers/?page_size=100&ordering=first_name')),
+      capability(() => httpClient.get('students/?page_size=100&ordering=first_name')),
+      capability(() => httpClient.get('parents/?page_size=100&ordering=first_name')),
+    ]);
+    return {
+      capabilities: {
+        staff: staff.available,
+        teachers: teachers.available,
+        students: students.available,
+        parents: parents.available,
+      },
+      staff: asList(staff.data).map((person) => mapDirectoryPerson(person, 'staff')),
+      teachers: asList(teachers.data).map((person) => mapDirectoryPerson(person, 'teacher')),
+      students: asList(students.data).map((person) => mapDirectoryPerson(person, 'student')),
+      parents: asList(parents.data).map((person) => mapDirectoryPerson(person, 'parent')),
+    };
+  }
+}
+
+function academicWindow() {
+  const from = new Date();
+  from.setDate(from.getDate() - 30);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date();
+  to.setDate(to.getDate() + 45);
+  to.setHours(23, 59, 59, 999);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function mapAcademicLesson(lesson) {
+  return {
+    id: String(lesson.id),
+    title: lesson.title || lesson.lesson_type_name || copy().lesson,
+    cohort: lesson.cohort_name || '',
+    room: lesson.room_name || '',
+    startsAt: lesson.starts_at,
+    endsAt: lesson.ends_at,
+    status: lesson.status || 'scheduled',
+  };
+}
+
+function mapAttendanceRecord(record) {
+  return {
+    id: String(record.id),
+    student: record.student_name || `${copy().student} #${record.student}`,
+    cohort: record.cohort_name || '',
+    lesson: record.lesson_title || copy().lesson,
+    at: record.lesson_starts_at || record.marked_at || record.created_at,
+    status: record.status || 'present',
+  };
+}
+
+function mapAssignment(assignment) {
+  return {
+    id: String(assignment.id),
+    title: assignment.title || '',
+    cohort: assignment.cohort_name || '',
+    dueAt: assignment.due_at,
+    status: assignment.status || 'draft',
+    maxScore: toNumber(assignment.max_score, 100),
+  };
+}
+
+function mapExam(exam) {
+  return {
+    id: String(exam.id),
+    title: exam.title || '',
+    subject: exam.subject_name || '',
+    cohort: exam.cohort_name || '',
+    date: exam.exam_date,
+    maxScore: toNumber(exam.max_score, 100),
+    published: Boolean(exam.is_published),
+  };
+}
+
+function mapGrade(grade) {
+  return {
+    id: String(grade.id),
+    student: grade.student_name || `${copy().student} #${grade.student}`,
+    subject: grade.subject_name || '',
+    value: toNumber(grade.value_raw),
+    display: grade.value_display || '—',
+  };
+}
+
+function mapRisk(risk) {
+  return {
+    id: `risk-${risk.student}`,
+    student: risk.name || `${copy().student} #${risk.student}`,
+    cohort: risk.cohort ? `#${risk.cohort}` : '',
+    level: risk.level || 'low',
+    score: toNumber(risk.score),
+    flags: asList(risk.flags).map((flag) => flag.code || flag.reason || String(flag)),
+  };
+}
+
+function mapAchievement(achievement) {
+  return {
+    id: String(achievement.id),
+    name: achievement.name || '',
+    description: achievement.description || '',
+    emoji: achievement.emoji || '★',
+    scope: achievement.scope || 'global',
+    status: achievement.status || 'active',
+  };
+}
+
+function mapReport(report) {
+  return {
+    id: String(report.id),
+    key: report.key,
+    title: report.title || report.key || '',
+    description: report.description || '',
+    format: report.default_format || 'pdf',
+  };
+}
+
+function mapPlacement(test) {
+  return {
+    id: String(test.id),
+    title: test.title || '',
+    description: test.description || '',
+    status: test.status || 'draft',
+    questions: asList(test.questions).length,
+    minutes: toNumber(test.time_limit_minutes),
+  };
+}
+
+export class HttpAcademicRepository extends IAcademicRepository {
+  async getWorkspace() {
+    const { from, to } = academicWindow();
+    const [schedule, attendance, assignments, exams, grades, risks, achievements, reports, placement] =
+      await Promise.all([
+        capability(() =>
+          httpClient.get(
+            `schedule/lessons/?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}&page_size=200`,
+          ),
+        ),
+        capability(() =>
+          httpClient.get(
+            `attendance/records/?date_from=${encodeURIComponent(from)}&date_to=${encodeURIComponent(to)}&page_size=200&ordering=-marked_at`,
+          ),
+        ),
+        capability(() => httpClient.get('assignments/?page_size=100&ordering=-due_at')),
+        capability(() => httpClient.get('academics/exams/?page_size=100&ordering=-exam_date')),
+        capability(() => httpClient.get('academics/grades/?page_size=100&ordering=-computed_at')),
+        capability(() => httpClient.get('intelligence/risk/')),
+        capability(() => httpClient.get('achievements/?page_size=100&ordering=-created_at')),
+        capability(() => httpClient.get('reports/?page_size=100&ordering=key')),
+        capability(() => httpClient.get('placement/tests/?page_size=100&ordering=-created_at')),
+      ]);
+
+    return {
+      capabilities: {
+        schedule: schedule.available,
+        attendance: attendance.available,
+        assignments: assignments.available,
+        academics: exams.available || grades.available,
+        intelligence: risks.available,
+        achievements: achievements.available,
+        reports: reports.available,
+        placement: placement.available,
+      },
+      schedule: asList(schedule.data).map(mapAcademicLesson),
+      attendance: asList(attendance.data).map(mapAttendanceRecord),
+      assignments: asList(assignments.data).map(mapAssignment),
+      exams: asList(exams.data).map(mapExam),
+      grades: asList(grades.data).map(mapGrade),
+      risks: asList(risks.data).map(mapRisk),
+      achievements: asList(achievements.data).map(mapAchievement),
+      reports: asList(reports.data).map(mapReport),
+      placement: asList(placement.data).map(mapPlacement),
+    };
+  }
+
+  async publishAssignment(assignmentId) {
+    return mapAssignment(await httpClient.post(`assignments/${assignmentId}/publish/`, {}));
+  }
+
+  async publishExam(examId) {
+    return mapExam(await httpClient.post(`academics/exams/${examId}/publish/`, {}));
+  }
+
+  runReport(reportKey, format = 'pdf') {
+    return httpClient.post('reports/runs/', {
+      report_key: reportKey,
+      format,
+      params: {},
+    });
+  }
+}
+
+function mapRewardType(reward) {
+  return {
+    id: String(reward.id),
+    name: reward.name || '',
+    description: reward.description || '',
+    cash: Boolean(reward.is_cash),
+    amount: toNumber(reward.default_amount_uzs),
+  };
+}
+
+function mapRule(rule) {
+  return {
+    id: String(rule.id),
+    title: rule.title || '',
+    version: rule.version || '—',
+    acknowledged: Boolean(rule.acknowledged),
+    updatedAt: rule.updated_at || rule.created_at,
+  };
+}
+
+function mapPurchaseOrder(order) {
+  return {
+    id: String(order.id),
+    supplier: order.supplier || '—',
+    amount: toNumber(order.amount_uzs),
+    status: order.status || 'pending',
+    items: asList(order.items).length,
+    createdAt: order.created_at,
+  };
+}
+
+function mapSale(sale) {
+  return {
+    id: String(sale.id),
+    item: sale.item || '',
+    quantity: toNumber(sale.quantity),
+    amount: toNumber(sale.amount_uzs),
+    status: sale.status || 'completed',
+    createdAt: sale.created_at,
+  };
+}
+
+function mapCampaign(campaign) {
+  return {
+    id: String(campaign.id),
+    name: campaign.name || '',
+    status: campaign.status || 'draft',
+    total: toNumber(campaign.total),
+    sent: toNumber(campaign.sent_count),
+    failed: toNumber(campaign.failed_count),
+    skipped: toNumber(campaign.skipped_count),
+  };
+}
+
+function mapAudit(row) {
+  return {
+    id: String(row.id),
+    actor: row.actor_username || row.actor_repr || 'system',
+    action: row.action || '',
+    resource: row.resource_type || '',
+    createdAt: row.created_at,
+  };
+}
+
+export class HttpOperationsRepository extends IOperationsRepository {
+  async getWorkspace() {
+    // Avoid probing endpoints that the static backend permission matrix denies.
+    // Apart from being noisy, a disabled upstream module may return 503 before its
+    // permission middleware runs. Role-gating here mirrors navigation while the API
+    // remains the final authority for every request we do make.
+    const profile = mapTeacher(await httpClient.get('users/me/'));
+    const role = profile.roleKey;
+    const forRoles = (roles, load) =>
+      roles.includes(role)
+        ? capability(load)
+        : Promise.resolve({ available: false, data: [] });
+    const allStaff = ['teacher', 'accountant', 'cashier', 'librarian', 'security', 'it', 'registrar', 'support'];
+    const commerce = ['accountant', 'cashier', 'registrar'];
+    const [rewards, rules, procurement, sales, campaigns, audit, roles, permissions, overrides] =
+      await Promise.all([
+        forRoles(allStaff, () => httpClient.get('rewards/types/?page_size=100&ordering=name')),
+        forRoles(allStaff, () => httpClient.get('rulebook/rules/mine/?page_size=100')),
+        forRoles(commerce, () => httpClient.get('procurement/?page_size=100&ordering=-created_at')),
+        forRoles(commerce, () => httpClient.get('sales/?page_size=100&ordering=-created_at')),
+        forRoles(['registrar'], () => httpClient.get('campaigns/?page_size=100&ordering=-created_at')),
+        forRoles(['it', 'support'], () => httpClient.get('audit/?page_size=100&ordering=-created_at')),
+        forRoles([], () => httpClient.get('access/roles/')),
+        forRoles([], () => httpClient.get('access/permissions/')),
+        forRoles([], () => httpClient.get('access/overrides/?page_size=100')),
+      ]);
+
+    const accessAvailable = roles.available || permissions.available || overrides.available;
+    const roleMap = roles.data?.roles ?? {};
+    const permissionList = asList(permissions.data?.permissions);
+    return {
+      capabilities: {
+        rewards: rewards.available,
+        rules: rules.available,
+        procurement: procurement.available,
+        sales: sales.available,
+        campaigns: campaigns.available,
+        audit: audit.available,
+        access: accessAvailable,
+      },
+      rewards: asList(rewards.data).map(mapRewardType),
+      rules: asList(rules.data).map(mapRule),
+      procurement: asList(procurement.data).map(mapPurchaseOrder),
+      sales: asList(sales.data).map(mapSale),
+      campaigns: asList(campaigns.data).map(mapCampaign),
+      audit: asList(audit.data).map(mapAudit),
+      access: {
+        roles: Object.keys(roleMap).length,
+        permissions: permissionList.length,
+        overrides: asList(overrides.data).length,
+      },
+    };
+  }
+
+  acknowledgeRule(ruleId) {
+    return httpClient.post(`rulebook/rules/${ruleId}/acknowledge/`, {});
   }
 }
 
