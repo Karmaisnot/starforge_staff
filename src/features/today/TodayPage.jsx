@@ -22,7 +22,14 @@ import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
 import styles from './today.module.css';
 
-const WIDGET_KEYS = ['schedule', 'recentCards', 'pendingTasks', 'printQueue', 'spotlight', 'activity'];
+const WIDGET_KEYS = [
+  'schedule',
+  'recentCards',
+  'pendingTasks',
+  'printQueue',
+  'spotlight',
+  'activity',
+];
 
 export function TodayPage() {
   const navigate = useNavigate();
@@ -68,24 +75,33 @@ export function TodayPage() {
           />
 
           {/* Urgent survey banner */}
-          <div className={styles.surveyBanner} onClick={() => navigate('/surveys')}>
-            <div className={styles.surveyGlow} />
-            <div className={styles.surveyInner}>
-              <span className={styles.pulseDot} />
-              <div style={{ flex: 1 }}>
-                <div className={styles.surveyEyebrow}>{t('today.surveyWord')} · {d.surveyBanner.remaining}</div>
-                <div className={styles.surveyTitle}>
-                  {d.surveyBanner.title}{' '}
-                  <span style={{ color: 'var(--sf-muted)', fontWeight: 500 }}>
-                    · {d.surveyBanner.meta}
-                  </span>
+          {d.surveyBanner && (
+            <div className={styles.surveyBanner} onClick={() => navigate('/surveys')}>
+              <div className={styles.surveyGlow} />
+              <div className={styles.surveyInner}>
+                <span className={styles.pulseDot} />
+                <div style={{ flex: 1 }}>
+                  <div className={styles.surveyEyebrow}>
+                    {t('today.surveyWord')} · {d.surveyBanner.remaining}
+                  </div>
+                  <div className={styles.surveyTitle}>
+                    {d.surveyBanner.title}{' '}
+                    <span style={{ color: 'var(--sf-muted)', fontWeight: 500 }}>
+                      · {d.surveyBanner.meta}
+                    </span>
+                  </div>
                 </div>
+                <Button
+                  variant="ink"
+                  icon="arrowR"
+                  iconRight
+                  onClick={stop(() => navigate('/surveys'))}
+                >
+                  {t('common.continue')}
+                </Button>
               </div>
-              <Button variant="ink" icon="arrowR" iconRight onClick={stop(() => navigate('/surveys'))}>
-                {t('common.continue')}
-              </Button>
             </div>
-          </div>
+          )}
 
           {/* Stats */}
           <div className={styles.statGrid}>
@@ -144,8 +160,12 @@ export function TodayPage() {
                 title={t('today.scheduleTitle')}
                 padded={false}
                 action={
-                  <button type="button" className={styles.link} onClick={() => navigate('/cohorts')}>
-                    {t('today.lessonsLink')}
+                  <button
+                    type="button"
+                    className={styles.link}
+                    onClick={() => navigate('/cohorts')}
+                  >
+                    {d.schedule.length} {t('today.lessonsLink')}
                   </button>
                 }
               >
@@ -155,11 +175,18 @@ export function TodayPage() {
                     className={`${styles.schedRow} ${row.state === 'gap' ? styles.schedGap : ''}`}
                   >
                     <span className={`sf-mono ${styles.schedTime}`}>{row.time}</span>
-                    <span className={styles.schedRail} style={{ background: slotRailColor(row.state) }} />
+                    <span
+                      className={styles.schedRail}
+                      style={{ background: slotRailColor(row.state) }}
+                    />
                     <span className={styles.schedL}>{row.label}</span>
                     <span className={styles.schedR}>{row.room}</span>
                     <span>
-                      {row.state === 'now' && <Chip tone="primary">{t('today.now')} · {row.mins}</Chip>}
+                      {row.state === 'now' && (
+                        <Chip tone="primary">
+                          {t('today.now')} · {row.mins}
+                        </Chip>
+                      )}
                       {row.state === 'next' && <Chip tone="accent">{t('today.next')}</Chip>}
                     </span>
                   </div>
@@ -172,7 +199,7 @@ export function TodayPage() {
                 title={t('today.recentCards')}
                 action={
                   <button type="button" className={styles.link} onClick={() => navigate('/cards')}>
-                    {t('today.tenLink')}
+                    {d.recentCards.length} {t('today.tenLink')}
                   </button>
                 }
               >
@@ -195,7 +222,7 @@ export function TodayPage() {
               {/* Pending tasks */}
               <Card
                 style={{ display: show('pendingTasks') ? undefined : 'none' }}
-                title={t('today.pendingTitle')}
+                title={`${t('today.pendingTitle')} · ${d.pendingTasks.length}`}
                 padded={false}
                 action={
                   <button type="button" className={styles.link} onClick={() => navigate('/tasks')}>
@@ -220,7 +247,9 @@ export function TodayPage() {
                         borderColor: doneTasks[i] ? 'var(--sf-success)' : 'var(--sf-border-strong)',
                       }}
                     >
-                      {doneTasks[i] && <Icon name="check" size={11} stroke={3} style={{ color: '#fffcf5' }} />}
+                      {doneTasks[i] && (
+                        <Icon name="check" size={11} stroke={3} style={{ color: '#fffcf5' }} />
+                      )}
                     </button>
                     <div className={styles.taskBody}>
                       <div className={styles.taskChips}>
@@ -271,7 +300,9 @@ export function TodayPage() {
                 <div style={{ position: 'relative' }}>
                   <div className={styles.aiHead}>
                     <AiBadge>{d.aiInsight.eyebrow}</AiBadge>
-                    <span style={{ fontSize: 11, color: 'var(--sf-muted)' }}>{d.aiInsight.count}</span>
+                    <span style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
+                      {d.aiInsight.count}
+                    </span>
                   </div>
                   <div className={styles.aiQuote}>{d.aiInsight.quote}</div>
                   <div className={styles.aiChips}>
@@ -300,7 +331,7 @@ export function TodayPage() {
                 padded={false}
                 action={
                   <button type="button" className={styles.link} onClick={() => navigate('/print')}>
-                    {t('today.twoLink')}
+                    {d.printQueue.length} {t('today.twoLink')}
                   </button>
                 }
               >
@@ -360,7 +391,11 @@ export function TodayPage() {
                 style={{ display: show('spotlight') ? undefined : 'none' }}
                 title={t('today.spotlight')}
                 action={
-                  <button type="button" className={styles.link} onClick={() => navigate('/cohorts')}>
+                  <button
+                    type="button"
+                    className={styles.link}
+                    onClick={() => navigate('/cohorts')}
+                  >
                     {t('today.change')}
                   </button>
                 }
@@ -378,7 +413,10 @@ export function TodayPage() {
                 <div className={styles.spotlightStats}>
                   {d.spotlight.stats.map((s, i) => (
                     <div key={i} className={styles.spotlightStat}>
-                      <div className="sf-mono" style={{ fontSize: 18, fontWeight: 700, color: s.color }}>
+                      <div
+                        className="sf-mono"
+                        style={{ fontSize: 18, fontWeight: 700, color: s.color }}
+                      >
                         {s.value}
                       </div>
                       <div className={styles.spotlightStatL}>{s.label}</div>
@@ -388,7 +426,10 @@ export function TodayPage() {
               </Card>
 
               {/* Activity */}
-              <Card style={{ display: show('activity') ? undefined : 'none' }} title={t('today.activity')}>
+              <Card
+                style={{ display: show('activity') ? undefined : 'none' }}
+                title={t('today.activity')}
+              >
                 {d.activity.map((a, i) => (
                   <div key={i} className={styles.activityRow}>
                     {a.who === 'AI' ? (

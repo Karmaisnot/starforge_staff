@@ -1,0 +1,83 @@
+.page {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  overflow: hidden;
+  padding: 28px;
+  background: var(--sf-bg);
+}
+.orbit {
+  position: absolute;
+  width: min(72vw, 860px);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in oklab, var(--sf-primary) 18%, transparent);
+  border-radius: 50%;
+  transform: translate(32%, -26%);
+}
+.orbit::before,
+.orbit::after {
+  position: absolute;
+  content: '';
+  border: inherit;
+  border-radius: inherit;
+  inset: 11%;
+}
+.orbit::after {
+  inset: 25%;
+}
+.panel {
+  position: relative;
+  width: min(100%, 570px);
+  padding: clamp(38px, 7vw, 70px);
+  border: 1px solid var(--sf-border);
+  border-radius: 24px;
+  background: color-mix(in oklab, var(--sf-surface) 94%, transparent);
+  box-shadow: 0 22px 70px color-mix(in oklab, var(--sf-ink) 11%, transparent);
+  text-align: center;
+}
+.mark {
+  display: inline-flex;
+  width: 60px;
+  height: 60px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 19px;
+  background: linear-gradient(
+    135deg,
+    var(--sf-primary),
+    color-mix(in oklab, var(--sf-primary) 70%, var(--sf-ink))
+  );
+  box-shadow: 0 12px 28px color-mix(in oklab, var(--sf-primary) 22%, transparent);
+}
+.eyebrow {
+  margin: 22px 0 0;
+  color: var(--sf-primary);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.title {
+  margin: 10px 0 0;
+  color: var(--sf-ink);
+  font-family: var(--sf-font-display);
+  font-size: clamp(32px, 5vw, 48px);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 0.98;
+}
+.copy {
+  max-width: 390px;
+  margin: 17px auto 0;
+  color: var(--sf-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 27px;
+}

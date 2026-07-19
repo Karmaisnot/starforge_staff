@@ -45,7 +45,10 @@ function TaskCard({ task, onToggle }) {
             {task.project}
           </Chip>
           <span style={{ flex: 1 }} />
-          <span className="sf-mono" style={{ fontSize: 10, fontWeight: 700, color: priorityColor(task.priority) }}>
+          <span
+            className="sf-mono"
+            style={{ fontSize: 10, fontWeight: 700, color: priorityColor(task.priority) }}
+          >
             {task.priority}
           </span>
         </div>
@@ -66,7 +69,11 @@ function TaskCard({ task, onToggle }) {
           <span
             className="sf-mono"
             style={{
-              color: task.urgent ? 'var(--sf-danger)' : task.state === 'done' ? 'var(--sf-muted)' : 'var(--sf-ink-2)',
+              color: task.urgent
+                ? 'var(--sf-danger)'
+                : task.state === 'done'
+                  ? 'var(--sf-muted)'
+                  : 'var(--sf-ink-2)',
               fontWeight: task.urgent ? 700 : 500,
             }}
           >
@@ -91,7 +98,11 @@ function KanbanBoard({ columns, tasks, onToggle, onAdd }) {
               <span className={styles.kanbanName}>{col.label}</span>
               <span className={styles.kanbanCount}>{colTasks.length}</span>
               <span style={{ flex: 1 }} />
-              <button className={styles.iconBtn} aria-label={t('common.add')} onClick={() => onAdd?.(col.id)}>
+              <button
+                className={styles.iconBtn}
+                aria-label={t('common.add')}
+                onClick={() => onAdd?.(col.id)}
+              >
                 <Icon name="plus" size={14} />
               </button>
             </div>
@@ -99,7 +110,9 @@ function KanbanBoard({ columns, tasks, onToggle, onAdd }) {
               {colTasks.map((t) => (
                 <TaskCard key={t.id} task={t} onToggle={onToggle} />
               ))}
-              {colTasks.length === 0 && <div className={styles.kanbanEmpty}>{t('tasks.empty')}</div>}
+              {colTasks.length === 0 && (
+                <div className={styles.kanbanEmpty}>{t('tasks.empty')}</div>
+              )}
             </div>
           </div>
         );
@@ -131,10 +144,13 @@ function TaskListView({ columns, tasks, onToggle }) {
                 aria-label={t('tasks.toggleState')}
                 style={{
                   background: task.state === 'done' ? 'var(--sf-success)' : 'transparent',
-                  borderColor: task.state === 'done' ? 'var(--sf-success)' : 'var(--sf-border-strong)',
+                  borderColor:
+                    task.state === 'done' ? 'var(--sf-success)' : 'var(--sf-border-strong)',
                 }}
               >
-                {task.state === 'done' && <Icon name="check" size={12} stroke={3} style={{ color: '#fffcf5' }} />}
+                {task.state === 'done' && (
+                  <Icon name="check" size={12} stroke={3} style={{ color: '#fffcf5' }} />
+                )}
               </button>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 {task.fromMgmt && <Chip tone="ink">{t('common.mgmtShort')}</Chip>}
@@ -161,12 +177,22 @@ function TaskListView({ columns, tasks, onToggle }) {
               <span>{task.assigner}</span>
             </div>
             <div>
-              <span className="sf-mono" style={{ fontSize: 12, color: task.urgent ? 'var(--sf-danger)' : 'var(--sf-ink-2)', fontWeight: task.urgent ? 700 : 500 }}>
+              <span
+                className="sf-mono"
+                style={{
+                  fontSize: 12,
+                  color: task.urgent ? 'var(--sf-danger)' : 'var(--sf-ink-2)',
+                  fontWeight: task.urgent ? 700 : 500,
+                }}
+              >
                 {task.deadline}
               </span>
             </div>
             <div>
-              <span className="sf-mono" style={{ fontSize: 11, fontWeight: 700, color: priorityColor(task.priority) }}>
+              <span
+                className="sf-mono"
+                style={{ fontSize: 11, fontWeight: 700, color: priorityColor(task.priority) }}
+              >
                 {task.priority}
               </span>
             </div>
@@ -240,11 +266,19 @@ function CalendarView({ tasks, onToggle }) {
   return (
     <Card padded={false}>
       <div className={styles.calHead}>
-        <button className={styles.iconBtn} onClick={() => step(-1)} aria-label={t('tasks.prevMonth')}>
+        <button
+          className={styles.iconBtn}
+          onClick={() => step(-1)}
+          aria-label={t('tasks.prevMonth')}
+        >
           <Icon name="chevR" size={16} style={{ transform: 'rotate(180deg)' }} />
         </button>
         <span className={styles.calMonth}>{monthLabel}</span>
-        <button className={styles.iconBtn} onClick={() => step(1)} aria-label={t('tasks.nextMonth')}>
+        <button
+          className={styles.iconBtn}
+          onClick={() => step(1)}
+          aria-label={t('tasks.nextMonth')}
+        >
           <Icon name="chevR" size={16} />
         </button>
       </div>
@@ -265,7 +299,10 @@ function CalendarView({ tasks, onToggle }) {
                 onClick={() => onToggle(task)}
                 title={task.title}
               >
-                <span className="sf-mono" style={{ color: priorityColor(task.priority), fontWeight: 700 }}>
+                <span
+                  className="sf-mono"
+                  style={{ color: priorityColor(task.priority), fontWeight: 700 }}
+                >
                   {task.priority}
                 </span>{' '}
                 {task.title}
@@ -285,7 +322,10 @@ function CalendarView({ tasks, onToggle }) {
                 style={{ borderLeftColor: task.urgent ? 'var(--sf-danger)' : task.projectColor }}
                 onClick={() => onToggle(task)}
               >
-                <span className="sf-mono" style={{ color: priorityColor(task.priority), fontWeight: 700 }}>
+                <span
+                  className="sf-mono"
+                  style={{ color: priorityColor(task.priority), fontWeight: 700 }}
+                >
                   {task.priority}
                 </span>{' '}
                 {task.title}
@@ -359,7 +399,11 @@ function NewTaskModal({ open, onClose, columns, projects, onCreate, presetState 
         </label>
         <label className={styles.field}>
           <span>{t('tasks.cProject')}</span>
-          <select className={styles.inputCtl} value={project} onChange={(e) => setProject(e.target.value)}>
+          <select
+            className={styles.inputCtl}
+            value={project}
+            onChange={(e) => setProject(e.target.value)}
+          >
             {projects.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -428,10 +472,7 @@ export function TasksPage() {
     () => [...added, ...(listState.data?.tasks ?? [])],
     [listState.data, added],
   );
-  const projects = useMemo(
-    () => [...new Set(baseTasks.map((t) => t.project))],
-    [baseTasks],
-  );
+  const projects = useMemo(() => [...new Set(baseTasks.map((t) => t.project))], [baseTasks]);
 
   const tasks = useMemo(() => {
     return baseTasks
@@ -440,6 +481,7 @@ export function TasksPage() {
       .filter((t) => !projectFilter || t.project === projectFilter)
       .filter((t) => !priorityFilter || t.priority === priorityFilter);
   }, [baseTasks, overrides, filter, projectFilter, priorityFilter]);
+  const openTaskCount = baseTasks.filter((task) => task.state !== 'done').length;
 
   // Click cycles a task through the workflow states — optimistic locally, then persisted.
   const cycle = async (task) => {
@@ -471,7 +513,16 @@ export function TasksPage() {
     // it afterwards if a non-todo lane was picked.
     const tempId = `new-${Date.now()}`;
     setAdded((list) => [
-      { id: tempId, urgent: false, fromMgmt: false, subtasks: null, assigner: t('common.me'), mine: true, projectColor: 'var(--sf-primary)', ...draft },
+      {
+        id: tempId,
+        urgent: false,
+        fromMgmt: false,
+        subtasks: null,
+        assigner: t('common.me'),
+        mine: true,
+        projectColor: 'var(--sf-primary)',
+        ...draft,
+      },
       ...list,
     ]);
     toast(`+ ${draft.title}`, 'success');
@@ -511,7 +562,7 @@ export function TasksPage() {
     <>
       <PageHeader
         title={t('tasks.title')}
-        subtitle={t('tasks.subtitle')}
+        subtitle={`${openTaskCount} ${t('tasks.openCount')}`}
         right={
           <>
             <ViewSwitcher options={viewOptions} value={view} onChange={setView} />
@@ -550,7 +601,12 @@ export function TasksPage() {
       <AsyncBoundary state={listState}>
         {(d) =>
           view === 'board' ? (
-            <KanbanBoard columns={d.columns} tasks={tasks} onToggle={cycle} onAdd={(colId) => setModal({ presetState: colId })} />
+            <KanbanBoard
+              columns={d.columns}
+              tasks={tasks}
+              onToggle={cycle}
+              onAdd={(colId) => setModal({ presetState: colId })}
+            />
           ) : view === 'list' ? (
             <TaskListView columns={d.columns} tasks={tasks} onToggle={cycle} />
           ) : (

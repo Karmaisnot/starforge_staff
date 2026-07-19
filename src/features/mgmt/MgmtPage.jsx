@@ -48,7 +48,12 @@ function ChatPanel({ thread, sent, onSend, transcriptReloadKey }) {
               <span style={{ fontSize: 15, fontWeight: 700 }}>{thread.name}</span>
               {thread.lead && <Chip tone="primary">{thread.role}</Chip>}
             </div>
-            <div style={{ fontSize: 11, color: thread.online ? 'var(--sf-success)' : 'var(--sf-muted)' }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: thread.online ? 'var(--sf-success)' : 'var(--sf-muted)',
+              }}
+            >
               {thread.online ? `● ${tt('mgmt.online')} · ${thread.role}` : thread.role}
             </div>
           </div>
@@ -65,15 +70,26 @@ function ChatPanel({ thread, sent, onSend, transcriptReloadKey }) {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div className={styles.cardEyebrow}>{m.taskCard.eyebrow}</div>
-                  <div style={{ marginTop: 2, fontSize: 14, fontWeight: 700 }}>{m.taskCard.title}</div>
+                  <div style={{ marginTop: 2, fontSize: 14, fontWeight: 700 }}>
+                    {m.taskCard.title}
+                  </div>
                   <div style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
                     {tt('tasks.cDeadline')}:{' '}
-                    <span className="sf-mono" style={{ color: 'var(--sf-danger)', fontWeight: 700 }}>
+                    <span
+                      className="sf-mono"
+                      style={{ color: 'var(--sf-danger)', fontWeight: 700 }}
+                    >
                       {m.taskCard.deadline}
                     </span>
                   </div>
                 </div>
-                <Button variant="soft" icon="arrowR" iconRight iconSize={12} onClick={() => navigate('/tasks')}>
+                <Button
+                  variant="soft"
+                  icon="arrowR"
+                  iconRight
+                  iconSize={12}
+                  onClick={() => navigate('/tasks')}
+                >
                   {tt('mgmt.toTask')}
                 </Button>
               </div>
@@ -85,7 +101,10 @@ function ChatPanel({ thread, sent, onSend, transcriptReloadKey }) {
               {!out && <Avatar name={thread.name} size={28} />}
               <div className={out ? styles.out : styles.in}>
                 {m.text}
-                <div className={styles.msgTime} style={out ? { textAlign: 'right', opacity: 0.8 } : {}}>
+                <div
+                  className={styles.msgTime}
+                  style={out ? { textAlign: 'right', opacity: 0.8 } : {}}
+                >
                   {m.time}
                   {out && m.read ? ' ✓✓' : ''}
                 </div>
@@ -110,7 +129,12 @@ function ChatPanel({ thread, sent, onSend, transcriptReloadKey }) {
 
       <form className={styles.input} onSubmit={send}>
         <input ref={fileRef} type="file" hidden onChange={onAttach} />
-        <button type="button" className={styles.iconBtn} onClick={() => fileRef.current?.click()} aria-label={tt('mgmt.attach')}>
+        <button
+          type="button"
+          className={styles.iconBtn}
+          onClick={() => fileRef.current?.click()}
+          aria-label={tt('mgmt.attach')}
+        >
           <Icon name="attach" size={16} />
         </button>
         <input
@@ -166,7 +190,12 @@ function ComposeModal({ open, onClose, onCreate }) {
       <form onSubmit={submit} className={styles.composeForm}>
         <label className={styles.composeField}>
           <span>{tt('mgmt.recipient')}</span>
-          <input className={styles.composeInput} value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <input
+            className={styles.composeInput}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+          />
         </label>
         <label className={styles.composeField}>
           <span>{tt('mgmt.message')}</span>
@@ -235,7 +264,15 @@ export function MgmtPage() {
     const tempId = `t-${Date.now()}`;
     // Optimistic: show the new thread + its first line immediately.
     setExtraThreads((list) => [
-      { id: tempId, name, role: tt('mgmt.newThreadRole'), lastMessage: message, time: tt('mgmt.now'), unread: 0, online: false },
+      {
+        id: tempId,
+        name,
+        role: tt('mgmt.newThreadRole'),
+        lastMessage: message,
+        time: tt('mgmt.now'),
+        unread: 0,
+        online: false,
+      },
       ...list,
     ]);
     // Seed the new conversation with the typed message so it actually appears
@@ -284,8 +321,42 @@ export function MgmtPage() {
   return (
     <AsyncBoundary state={state}>
       {(loaded) => {
-        const threads = [...extraThreads, ...loaded];
+        const threads = [...extraThreads, ...(Array.isArray(loaded) ? loaded : [])];
         const cur = threads.find((t) => t.id === openId) ?? threads[0];
+
+        if (!cur) {
+          return (
+            <>
+              <PageHeader
+                title={tt('mgmt.title')}
+                subtitle={tt('mgmt.emptyBody')}
+                right={
+                  <Button variant="primary" icon="edit" onClick={() => setComposeOpen(true)}>
+                    {tt('common.newMessage')}
+                  </Button>
+                }
+              />
+              <Card className={styles.emptyPage}>
+                <div className={styles.emptyPageInner}>
+                  <div className={styles.emptyMark} aria-hidden="true">
+                    <StarMark size={28} color="#fffcf5" />
+                  </div>
+                  <h2 className={styles.emptyTitle}>{tt('mgmt.emptyTitle')}</h2>
+                  <p className={styles.emptyCopy}>{tt('mgmt.emptyBody')}</p>
+                  <Button variant="soft" icon="edit" onClick={() => setComposeOpen(true)}>
+                    {tt('common.newMessage')}
+                  </Button>
+                </div>
+              </Card>
+              <ComposeModal
+                open={composeOpen}
+                onClose={() => setComposeOpen(false)}
+                onCreate={createThread}
+              />
+            </>
+          );
+        }
+
         return (
           <>
             <PageHeader
@@ -317,16 +388,45 @@ export function MgmtPage() {
                       {t.online && <span className={styles.onlineDot} />}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 13, fontWeight: t.unread > 0 ? 700 : 600 }}>{t.name}</span>
-                        <span className="sf-mono" style={{ fontSize: 9.5, color: 'var(--sf-muted)' }}>{t.time}</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <span style={{ fontSize: 13, fontWeight: t.unread > 0 ? 700 : 600 }}>
+                          {t.name}
+                        </span>
+                        <span
+                          className="sf-mono"
+                          style={{ fontSize: 9.5, color: 'var(--sf-muted)' }}
+                        >
+                          {t.time}
+                        </span>
                       </div>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center', margin: '1px 0 4px' }}>
-                        {t.pinned && <Icon name="pin" size={9} style={{ color: 'var(--sf-accent)' }} />}
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: 4,
+                          alignItems: 'center',
+                          margin: '1px 0 4px',
+                        }}
+                      >
+                        {t.pinned && (
+                          <Icon name="pin" size={9} style={{ color: 'var(--sf-accent)' }} />
+                        )}
                         {t.lead && <Chip tone="primary">{t.role}</Chip>}
                         <span style={{ fontSize: 10, color: 'var(--sf-muted)' }}>{t.role}</span>
                       </div>
-                      <div className={styles.threadLast} style={{ color: t.unread > 0 ? 'var(--sf-ink-2)' : 'var(--sf-muted)', fontWeight: t.unread > 0 ? 600 : 400 }}>
+                      <div
+                        className={styles.threadLast}
+                        style={{
+                          color: t.unread > 0 ? 'var(--sf-ink-2)' : 'var(--sf-muted)',
+                          fontWeight: t.unread > 0 ? 600 : 400,
+                        }}
+                      >
                         {t.lastMessage}
                       </div>
                     </div>
@@ -344,7 +444,11 @@ export function MgmtPage() {
               />
             </div>
 
-            <ComposeModal open={composeOpen} onClose={() => setComposeOpen(false)} onCreate={createThread} />
+            <ComposeModal
+              open={composeOpen}
+              onClose={() => setComposeOpen(false)}
+              onCreate={createThread}
+            />
           </>
         );
       }}

@@ -1,5 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { SessionGate } from '@/app/SessionGate.jsx';
+import { RouteErrorPage } from '@/app/RouteErrorPage.jsx';
 import { AppShell } from '@/layout/AppShell.jsx';
+import { LoginPage } from '@/features/auth/LoginPage.jsx';
 import { TodayPage } from '@/features/today/TodayPage.jsx';
 import { CohortsPage } from '@/features/cohorts/CohortsPage.jsx';
 import { TasksPage } from '@/features/tasks/TasksPage.jsx';
@@ -14,21 +17,32 @@ import { SettingsPage } from '@/features/settings/SettingsPage.jsx';
 
 export const router = createBrowserRouter([
   {
-    element: <AppShell />,
+    path: 'login',
+    element: <LoginPage />,
+    errorElement: <RouteErrorPage />,
+  },
+  {
+    element: <SessionGate />,
+    errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <Navigate to="/today" replace /> },
-      { path: 'today', element: <TodayPage /> },
-      { path: 'cohorts', element: <CohortsPage /> },
-      { path: 'tasks', element: <TasksPage /> },
-      { path: 'ai', element: <AiPage /> },
-      { path: 'print', element: <PrintPage /> },
-      { path: 'surveys', element: <SurveysPage /> },
-      { path: 'mgmt', element: <MgmtPage /> },
-      { path: 'cards', element: <CardsPage /> },
-      { path: 'materials', element: <MaterialsPage /> },
-      { path: 'notifications', element: <NotificationsPage /> },
-      { path: 'settings', element: <SettingsPage /> },
-      { path: '*', element: <Navigate to="/today" replace /> },
+      {
+        element: <AppShell />,
+        children: [
+          { index: true, element: <Navigate to="/today" replace /> },
+          { path: 'today', element: <TodayPage /> },
+          { path: 'cohorts', element: <CohortsPage /> },
+          { path: 'tasks', element: <TasksPage /> },
+          { path: 'ai', element: <AiPage /> },
+          { path: 'print', element: <PrintPage /> },
+          { path: 'surveys', element: <SurveysPage /> },
+          { path: 'mgmt', element: <MgmtPage /> },
+          { path: 'cards', element: <CardsPage /> },
+          { path: 'materials', element: <MaterialsPage /> },
+          { path: 'notifications', element: <NotificationsPage /> },
+          { path: 'settings', element: <SettingsPage /> },
+          { path: '*', element: <Navigate to="/today" replace /> },
+        ],
+      },
     ],
   },
 ]);

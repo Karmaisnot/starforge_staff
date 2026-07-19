@@ -5,7 +5,10 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['dist', 'node_modules'] },
+  // Root-level *.jsx files are archived design/prototype fragments. The Vite
+  // application lives in src/, so linting those incomplete standalone samples
+  // only hides actionable diagnostics from the shipped code.
+  { ignores: ['dist', 'node_modules', '*.jsx'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
@@ -30,6 +33,12 @@ export default [
       'react/prop-types': 'off',
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['vite.config.js'],
+    languageOptions: {
+      globals: { ...globals.node },
     },
   },
 ];

@@ -18,6 +18,17 @@
   height: 100%;
   background: var(--sf-ai);
 }
+.unavailable {
+  margin: 0 0 16px;
+  padding: 11px 14px;
+  border: 1px solid var(--sf-ai-border);
+  border-left: 3px solid var(--sf-ai);
+  border-radius: 10px;
+  background: var(--sf-ai-bg);
+  color: var(--sf-ink-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
 
 .layout {
   display: grid;
@@ -272,6 +283,10 @@
   color: var(--sf-ink);
   outline: none;
 }
+.inputField:disabled {
+  cursor: not-allowed;
+  color: var(--sf-muted);
+}
 .send {
   width: 36px;
   height: 36px;
@@ -284,6 +299,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+.send:disabled,
+.menuItem:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 .ctx {
   display: flex;
@@ -309,14 +329,29 @@
   border-bottom: none;
 }
 
-
 /* Conversation search input */
-.searchInput { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; color: var(--sf-ink); width: 100%; }
-.searchInput::placeholder { color: var(--sf-muted); }
+.searchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--sf-ink);
+  width: 100%;
+}
+.searchInput::placeholder {
+  color: var(--sf-muted);
+}
 
 /* Chat overflow menu */
-.menuWrap { position: relative; }
-.menuScrim { position: fixed; inset: 0; z-index: 20; }
+.menuWrap {
+  position: relative;
+}
+.menuScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
 .menu {
   position: absolute;
   top: calc(100% + 6px);

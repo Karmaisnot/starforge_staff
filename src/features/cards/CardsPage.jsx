@@ -28,6 +28,7 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
   }, [open, preset]);
 
   const kindTypes = types?.[kind] ?? [];
+  const hasTypes = (types?.all ?? []).length > 0;
 
   const close = () => {
     setKind('up');
@@ -39,6 +40,7 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
 
   const submit = (e) => {
     e.preventDefault();
+    if (!hasTypes) return;
     if (!recipient.trim()) {
       toast(tr('cards.needName'), 'danger');
       return;
@@ -62,13 +64,14 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
           <Button variant="ghost" onClick={close}>
             {tr('common.cancel')}
           </Button>
-          <Button variant="primary" icon="brand" onClick={submit}>
+          <Button variant="primary" icon="brand" onClick={submit} disabled={!hasTypes}>
             {tr('cards.give')}
           </Button>
         </>
       }
     >
       <form onSubmit={submit} className={styles.form}>
+        {!hasTypes && <p className={styles.emptyCopy}>{tr('cards.noTypes')}</p>}
         <label className={styles.field}>
           <span>{tr('cards.fKind')}</span>
           <Segmented
@@ -89,6 +92,7 @@ function GiveCardModal({ open, onClose, types, onIssue, preset }) {
             className={styles.select}
             value={type || kindTypes[0]?.name || ''}
             onChange={(e) => setType(e.target.value)}
+            disabled={!hasTypes}
           >
             {kindTypes.map((t) => (
               <option key={t.name} value={t.name}>
@@ -186,31 +190,65 @@ export function CardsPage() {
     <AsyncBoundary state={state}>
       {(d) => {
         const recent = [...issued, ...d.recent];
+        const stats = {
+          upThisWeek: 0,
+          downThisWeek: 0,
+          recipients: 0,
+          typeCount: 0,
+          upTrend: '',
+          ...(d.stats ?? {}),
+        };
+        const totalIssued = Number(stats.upThisWeek) + Number(stats.downThisWeek);
+        const hasTypes = d.types.all.length > 0;
         return (
           <>
             <PageHeader
               title={tr('cards.title')}
-              subtitle={tr('cards.subtitle')}
+              subtitle={`${totalIssued} ${tr('cards.issuedThisWeek')}`}
               right={
-                <Button variant="primary" icon="plus" onClick={() => setModal({})}>
+                <Button
+                  variant="primary"
+                  icon="plus"
+                  disabled={!hasTypes}
+                  title={!hasTypes ? tr('cards.noTypes') : undefined}
+                  onClick={() => setModal({})}
+                >
                   {tr('common.giveCard')}
                 </Button>
               }
             />
 
             <div className={styles.statGrid}>
-              <Stat value="↑11" label={tr('cards.statUp')} color="#7a4f0e" trend={{ up: true, value: '+3' }} />
-              <Stat value="↓3" label={tr('cards.statDown')} color="var(--sf-danger)" />
-              <Stat value="58" label={tr('cards.recipients')} />
-              <Stat value="6" unit="v2.3" label={tr('cards.typeCount')} />
+              <Stat
+                value={`↑${stats.upThisWeek}`}
+                label={tr('cards.statUp')}
+                color="#7a4f0e"
+                trend={stats.upTrend ? { up: true, value: stats.upTrend } : undefined}
+              />
+              <Stat
+                value={`↓${stats.downThisWeek}`}
+                label={tr('cards.statDown')}
+                color="var(--sf-danger)"
+              />
+              <Stat value={stats.recipients} label={tr('cards.recipients')} />
+              <Stat value={stats.typeCount} label={tr('cards.typeCount')} />
             </div>
 
             <div className={styles.grid}>
               <div>
-                <h3 className={styles.sectionH}>{tr('cards.recentTitle')}</h3>
+                <h3 className={styles.sectionH}>
+                  {tr('cards.recentTitle')} · {recent.length}
+                </h3>
                 <Card padded={false}>
+                  {recent.length === 0 && (
+                    <div className={styles.emptyCopy}>{tr('cards.emptyRecent')}</div>
+                  )}
                   {recent.map((c) => (
-                    <button key={c.id} className={styles.row} onClick={() => toast(`${c.recipient} · ${c.typeName}`)}>
+                    <button
+                      key={c.id}
+                      className={styles.row}
+                      onClick={() => toast(`${c.recipient} · ${c.typeName}`)}
+                    >
                       <div
                         className={styles.miniCard}
                         style={{
@@ -222,7 +260,13 @@ export function CardsPage() {
                         }}
                       >
                         <StarMark size={16} color={c.kind === 'up' ? '#7a4f0e' : '#5c1a0c'} />
-                        <span style={{ fontSize: 8, fontWeight: 800, color: c.kind === 'up' ? '#7a4f0e' : '#5c1a0c' }}>
+                        <span
+                          style={{
+                            fontSize: 8,
+                            fontWeight: 800,
+                            color: c.kind === 'up' ? '#7a4f0e' : '#5c1a0c',
+                          }}
+                        >
                           {c.kind === 'up' ? '↑ UP' : '↓ DOWN'}
                         </span>
                       </div>
@@ -231,10 +275,24 @@ export function CardsPage() {
                           <span style={{ fontSize: 13.5, fontWeight: 700 }}>{c.recipient}</span>
                           <span style={{ fontSize: 11, color: 'var(--sf-muted)' }}>{c.cohort}</span>
                         </div>
-                        <div style={{ marginTop: 2, fontSize: 12, color: c.kind === 'up' ? 'var(--sf-accent-ink)' : 'var(--sf-danger)', fontWeight: 600 }}>
+                        <div
+                          style={{
+                            marginTop: 2,
+                            fontSize: 12,
+                            color: c.kind === 'up' ? 'var(--sf-accent-ink)' : 'var(--sf-danger)',
+                            fontWeight: 600,
+                          }}
+                        >
                           {c.typeName}
                         </div>
-                        <div style={{ marginTop: 4, fontSize: 11.5, color: 'var(--sf-ink-2)', fontStyle: 'italic' }}>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontSize: 11.5,
+                            color: 'var(--sf-ink-2)',
+                            fontStyle: 'italic',
+                          }}
+                        >
                           “{c.reason}”
                         </div>
                       </div>
@@ -247,8 +305,11 @@ export function CardsPage() {
               </div>
 
               <div>
-                <h3 className={styles.sectionH}>{tr('cards.typesTitle')}</h3>
+                <h3 className={styles.sectionH}>
+                  {tr('cards.typesTitle')} · {d.types.all.length}
+                </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {!hasTypes && <div className={styles.emptyCopy}>{tr('cards.noTypes')}</div>}
                   {d.types.all.map((t) => {
                     const isUp = t.kind === 'up';
                     return (
@@ -271,9 +332,18 @@ export function CardsPage() {
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 13, fontWeight: 700 }}>{t.name}</div>
-                          <div style={{ fontSize: 10.5, color: 'var(--sf-muted)' }}>{t.subtitle}</div>
+                          <div style={{ fontSize: 10.5, color: 'var(--sf-muted)' }}>
+                            {t.subtitle}
+                          </div>
                         </div>
-                        <span className="sf-mono" style={{ fontSize: 13, fontWeight: 700, color: isUp ? '#7a4f0e' : 'var(--sf-danger)' }}>
+                        <span
+                          className="sf-mono"
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: isUp ? '#7a4f0e' : 'var(--sf-danger)',
+                          }}
+                        >
                           {isUp ? '↑' : '↓'}
                           {t.count}
                         </span>

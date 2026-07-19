@@ -7,6 +7,7 @@ import { useAsync } from '@/hooks/useAsync.js';
 import { useTheme } from '@/hooks/useTheme.js';
 import { useToast } from '@/hooks/useToast.js';
 import { useT } from '@/hooks/useT.js';
+import { logout } from '@/data/http/authToken.js';
 import styles from './settings.module.css';
 
 const LANG_LABELS = { uz: "O'zbekcha", ru: 'Русский', en: 'English' };
@@ -79,6 +80,7 @@ export function SettingsPage() {
     return dvc.userAgent || dvc.platform || t('settings.devices');
   };
   const [draft, setDraft] = useState({ name: '', username: '' });
+  const usernameEditable = profile?.usernameEditable !== false;
   useEffect(() => {
     if (editOpen) setDraft({ name: profile.name ?? '', username: profile.username ?? '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,14 +103,17 @@ export function SettingsPage() {
     e.preventDefault();
     const next = {
       name: draft.name.trim() || profile.name,
-      username: draft.username.trim() || profile.username,
+      username: usernameEditable ? draft.username.trim() || profile.username : profile.username,
     };
     // Optimistic overlay so the card updates instantly.
     setEdits(next);
     setEditOpen(false);
     toast(t('settings.profileSaved'), 'success');
     try {
-      await account.updateTeacher({ name: next.name, username: next.username });
+      await account.updateTeacher({
+        name: next.name,
+        ...(usernameEditable ? { username: next.username } : {}),
+      });
       // Server truth now carries the change — refetch and drop the local overlay.
       reloadTeacher();
       setEdits(null);
@@ -117,10 +122,15 @@ export function SettingsPage() {
       toast(t('common.error'), 'error');
     }
   };
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
     setLogoutOpen(false);
-    setLoggedOut(true);
-    toast(t('settings.loggedOut'));
+    try {
+      await logout();
+      setLoggedOut(true);
+      toast(t('settings.loggedOut'));
+    } catch {
+      toast(t('common.error'), 'error');
+    }
   };
 
   const sections = [
@@ -257,7 +267,10 @@ export function SettingsPage() {
                 <div style={{ fontSize: 13, color: 'var(--sf-muted)' }}>
                   {profile?.role} · {profile?.branch}
                 </div>
-                <div className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)', marginTop: 4 }}>
+                <div
+                  className="sf-mono"
+                  style={{ fontSize: 11, color: 'var(--sf-muted)', marginTop: 4 }}
+                >
                   @{profile?.username}
                 </div>
               </div>
@@ -279,7 +292,11 @@ export function SettingsPage() {
               {section.items.map((item) => (
                 <div key={item.key} className={styles.row}>
                   <span>{item.label}</span>
-                  <Toggle on={toggles[item.key]} onClick={() => flip(item.key, item.label)} label={item.label} />
+                  <Toggle
+                    on={toggles[item.key]}
+                    onClick={() => flip(item.key, item.label)}
+                    label={item.label}
+                  />
                 </div>
               ))}
             </Card>
@@ -302,7 +319,9 @@ export function SettingsPage() {
                   const next = e.target.value;
                   setLocale(next);
                   toast(LANG_LABELS[next]);
-                  account.patchSettings({ locale: next }).catch(() => toast(t('common.error'), 'error'));
+                  account
+                    .patchSettings({ locale: next })
+                    .catch(() => toast(t('common.error'), 'error'));
                 }}
               >
                 {locales.map((l) => (
@@ -315,7 +334,14 @@ export function SettingsPage() {
           </Card>
 
           <Card title={t('settings.aiLimit')}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 10,
+              }}
+            >
               <AiBadge compact>{t('ai.limit')}</AiBadge>
               <span className="sf-mono" style={{ fontSize: 12, color: 'var(--sf-muted)' }}>
                 {usage?.used ?? 0} / {usage?.limit ?? 0}
@@ -376,7 +402,13 @@ export function SettingsPage() {
               className={styles.editInput}
               value={draft.username}
               onChange={(e) => setDraft((d) => ({ ...d, username: e.target.value }))}
+              disabled={!usernameEditable}
             />
+            {!usernameEditable && (
+              <small style={{ color: 'var(--sf-muted)', lineHeight: 1.35 }}>
+                {t('settings.usernameManaged')}
+              </small>
+            )}
           </label>
         </form>
       </Modal>

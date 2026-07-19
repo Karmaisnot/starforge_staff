@@ -1,23 +1,53 @@
-// Bearer-token holder + session bootstrap for the HTTP data layer.
-//
-// The teacher app has no login screen; it auto-establishes a real session with
-// the seeded demo teacher on first call, so logout/devices/etc. are backed by a
-// real JWT + server session (not a cosmetic flag). Swap `DEMO_CREDENTIALS` for a
-// real login form later — nothing else changes.
+// Session handling for the external Starforge API. Its access token is opaque:
+// it cannot be refreshed or decoded client-side, so a 401 always means re-login.
+import { getLocale } from '@/i18n/locale.js';
+import { apiUrl } from './apiConfig.js';
+import { ApiError } from './apiError.js';
 
-const STORAGE_KEY = 'sf-token';
-const BASE_URL = import.meta.env?.VITE_API_BASE_URL ?? '';
-const DEMO_CREDENTIALS = { username: 'nigora.karimova', password: 'demo1234' };
+const STORAGE_KEY = 'sf-session-access';
+const DEVICE_KEY = 'sf-device-id';
+const AUTH_EVENT = 'sf:auth-changed';
+const LOGIN_PATH = import.meta.env?.VITE_AUTH_ENDPOINT === 'role-login' ? 'auth/role-login/' : 'auth/login/';
 
-let token = readStored();
-let inflight = null;
+let token = readStorage(STORAGE_KEY);
 
-function readStored() {
+function readStorage(key) {
   try {
-    return localStorage.getItem(STORAGE_KEY) || null;
+    return localStorage.getItem(key) || null;
   } catch {
     return null;
   }
+}
+
+function writeStorage(key, value) {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    // Private browsing or storage restrictions should not prevent an in-memory session.
+  }
+}
+
+function notifySessionChange() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_EVENT));
+}
+
+function parsePayload(response) {
+  return response.json().catch(() => null);
+}
+
+function unwrap(payload) {
+  if (payload && payload.success === true && Object.hasOwn(payload, 'data')) return payload.data;
+  return payload;
+}
+
+function stableDeviceId() {
+  const existing = readStorage(DEVICE_KEY);
+  if (existing) return existing;
+
+  const value = globalThis.crypto?.randomUUID?.() ?? `web-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  writeStorage(DEVICE_KEY, value);
+  return value;
 }
 
 export function getToken() {
@@ -25,37 +55,73 @@ export function getToken() {
 }
 
 export function setToken(next) {
-  token = next || null;
-  try {
-    if (token) localStorage.setItem(STORAGE_KEY, token);
-    else localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    /* storage unavailable — keep in memory */
-  }
+  token = typeof next === 'string' && next ? next : null;
+  writeStorage(STORAGE_KEY, token);
+  notifySessionChange();
 }
 
 export function clearToken() {
   setToken(null);
 }
 
-/** Ensure a valid session exists, logging in (once, de-duped) if needed. */
-export async function ensureSession() {
-  if (token) return token;
-  if (inflight) return inflight;
-  inflight = (async () => {
-    const res = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(DEMO_CREDENTIALS),
+export function subscribeToSession(listener) {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(AUTH_EVENT, listener);
+  return () => window.removeEventListener(AUTH_EVENT, listener);
+}
+
+/** Sign in once; callers are responsible for rendering the form and errors. */
+export async function login({ username, password }) {
+  const response = await fetch(apiUrl(LOGIN_PATH), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept-Language': getLocale(),
+    },
+    body: JSON.stringify({
+      username: String(username ?? '').trim(),
+      password: String(password ?? ''),
+      device_id: stableDeviceId(),
+      platform: 'web',
+    }),
+  });
+  const payload = await parsePayload(response);
+
+  if (!response.ok || payload?.success === false) {
+    throw new ApiError(response.status, 'POST', LOGIN_PATH, payload, response.headers.get('Retry-After'));
+  }
+
+  const data = unwrap(payload);
+  const access = data?.access ?? data?.token;
+  if (typeof access !== 'string' || !access) {
+    throw new ApiError(500, 'POST', LOGIN_PATH, {
+      code: 'invalid_auth_response',
+      message: 'The server did not return a session token.',
     });
-    if (!res.ok) throw new Error(`Login failed: HTTP ${res.status}`);
-    const data = await res.json();
-    setToken(data.token);
-    return data.token;
-  })();
+  }
+
+  setToken(access);
+  return data;
+}
+
+/** End the server-side session when possible, then always remove it locally. */
+export async function logout() {
+  const current = getToken();
+  if (!current) return;
+
   try {
-    return await inflight;
+    const response = await fetch(apiUrl('auth/logout/'), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${current}`,
+        'Accept-Language': getLocale(),
+      },
+    });
+    const payload = response.status === 204 ? null : await parsePayload(response);
+    if (!response.ok && response.status !== 401) {
+      throw new ApiError(response.status, 'POST', 'auth/logout/', payload, response.headers.get('Retry-After'));
+    }
   } finally {
-    inflight = null;
+    clearToken();
   }
 }

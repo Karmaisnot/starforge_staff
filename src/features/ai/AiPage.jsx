@@ -19,21 +19,21 @@ export function AiPage() {
   // `reloadKey` after a persisted mutation to reconcile with server truth.
   const [reloadKey, setReloadKey] = useState(0);
   const refetch = () => setReloadKey((k) => k + 1);
-  const state = useAsync(
-    () =>
-      Promise.all([
-        ai.getConversations(),
-        ai.getUsage(),
-        ai.getWorkspace(),
-        ai.getActiveConversation(),
-      ]).then(([conversations, usage, workspace, active]) => ({
-        conversations,
-        usage,
-        workspace,
-        active,
-      })),
-    [locale, reloadKey],
-  );
+  const state = useAsync(async () => {
+    const [conversations, usage, workspace] = await Promise.all([
+      ai.getConversations(),
+      ai.getUsage(),
+      ai.getWorkspace(),
+    ]);
+    return {
+      conversations,
+      usage,
+      workspace,
+      // Derive the active conversation from the already-loaded list. Calling
+      // getActiveConversation here made a second identical API request.
+      active: conversations.find((conversation) => conversation.active) ?? conversations[0] ?? null,
+    };
+  }, [locale, reloadKey]);
 
   const [selectedId, setSelectedId] = useState(null);
   const [draft, setDraft] = useState('');
@@ -46,15 +46,26 @@ export function AiPage() {
   return (
     <AsyncBoundary state={state}>
       {(d) => {
-        const activeId = selectedId ?? d.active?.id;
-        const t = d.workspace.transcript;
+        const conversations = Array.isArray(d?.conversations) ? d.conversations : [];
+        const usage = { used: 0, limit: 0, percent: 0, unavailable: false, ...(d?.usage ?? {}) };
+        const workspace = {
+          prompts: [],
+          context: [],
+          attention: [],
+          topics: [],
+          transcript: {},
+          ...(d?.workspace ?? {}),
+        };
+        const active = d?.active ?? null;
+        const activeId = selectedId ?? active?.id;
+        const t = workspace.transcript;
         // The loaded workspace (transcript + analysis) belongs to one conversation.
         // Other conversations have no transcript yet, so we show a clean start state
         // instead of mislabeling this conversation's data under their name.
-        const activeConv = d.conversations.find((c) => c.id === activeId);
-        const isWorkspaceConv = activeId === d.active?.id;
+        const activeConv = conversations.find((c) => c.id === activeId);
+        const isWorkspaceConv = activeId === active?.id;
         const msgs = convMsgs[activeId] ?? [];
-        const filteredConvs = d.conversations.filter((g) =>
+        const filteredConvs = conversations.filter((g) =>
           String(g.name).toLowerCase().includes(query.toLowerCase()),
         );
 
@@ -66,7 +77,10 @@ export function AiPage() {
           const value = (text ?? draft).trim();
           if (!value || !activeId) return;
           setDraft('');
-          setConvMsgs((m) => ({ ...m, [activeId]: [...(m[activeId] ?? []), { role: 'user', text: value }] }));
+          setConvMsgs((m) => ({
+            ...m,
+            [activeId]: [...(m[activeId] ?? []), { role: 'user', text: value }],
+          }));
           toast(tt('ai.writing'));
           const targetId = activeId;
           try {
@@ -92,6 +106,7 @@ export function AiPage() {
 
         const clearChat = async () => {
           const targetId = activeId;
+          if (!targetId || usage.unavailable) return;
           const prev = convMsgs[targetId] ?? [];
           setConvMsgs((m) => ({ ...m, [targetId]: [] }));
           setMenuOpen(false);
@@ -131,7 +146,10 @@ export function AiPage() {
             <PageHeader
               title={
                 <>
-                  {tt('ai.titleA')} <span className="sf-serif" style={{ fontWeight: 400 }}>{tt('ai.titleB')}</span>
+                  {tt('ai.titleA')}{' '}
+                  <span className="sf-serif" style={{ fontWeight: 400 }}>
+                    {tt('ai.titleB')}
+                  </span>
                 </>
               }
               subtitle={tt('ai.subtitle')}
@@ -139,14 +157,16 @@ export function AiPage() {
                 <div className={styles.meter}>
                   <AiBadge compact>{tt('ai.limit')}</AiBadge>
                   <div className={styles.meterBar}>
-                    <div style={{ width: `${d.usage.percent}%` }} />
+                    <div style={{ width: `${usage.percent}%` }} />
                   </div>
                   <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
-                    {d.usage.used} / {d.usage.limit}
+                    {usage.used} / {usage.limit}
                   </span>
                 </div>
               }
             />
+
+            {usage.unavailable && <div className={styles.unavailable}>{tt('ai.unavailable')}</div>}
 
             <div className={styles.layout}>
               {/* List */}
@@ -181,7 +201,9 @@ export function AiPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <span style={{ fontSize: 13, fontWeight: 700 }}>{g.name}</span>
-                        {g.pinned && <Icon name="pin" size={10} style={{ color: 'var(--sf-accent)' }} />}
+                        {g.pinned && (
+                          <Icon name="pin" size={10} style={{ color: 'var(--sf-accent)' }} />
+                        )}
                       </div>
                       <div style={{ fontSize: 10.5, color: 'var(--sf-muted)' }}>{g.sub}</div>
                       <div className={styles.groupPreview}>{g.preview}</div>
@@ -213,7 +235,11 @@ export function AiPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className={styles.iconBtn} onClick={downloadChat} aria-label={tt('ai.menuDownload')}>
+                    <button
+                      className={styles.iconBtn}
+                      onClick={downloadChat}
+                      aria-label={tt('ai.menuDownload')}
+                    >
                       <Icon name="download" size={14} />
                     </button>
                     <div className={styles.menuWrap}>
@@ -230,11 +256,20 @@ export function AiPage() {
                         <>
                           <div className={styles.menuScrim} onClick={() => setMenuOpen(false)} />
                           <div className={styles.menu} role="menu">
-                            <button className={styles.menuItem} role="menuitem" onClick={downloadChat}>
+                            <button
+                              className={styles.menuItem}
+                              role="menuitem"
+                              onClick={downloadChat}
+                            >
                               <Icon name="download" size={14} />
                               {tt('ai.menuDownload')}
                             </button>
-                            <button className={styles.menuItem} role="menuitem" onClick={clearChat}>
+                            <button
+                              className={styles.menuItem}
+                              role="menuitem"
+                              onClick={clearChat}
+                              disabled={!activeId || usage.unavailable}
+                            >
                               <Icon name="x" size={14} />
                               {tt('ai.menuClear')}
                             </button>
@@ -246,7 +281,7 @@ export function AiPage() {
                 </div>
 
                 <div className={styles.prompts}>
-                  {d.workspace.prompts.map((p) => (
+                  {workspace.prompts.map((p) => (
                     <button key={p} className={styles.prompt} onClick={() => setDraft(p)}>
                       {p}
                     </button>
@@ -256,70 +291,91 @@ export function AiPage() {
                 <div className={styles.body}>
                   {isWorkspaceConv && (
                     <>
-                  <div className={styles.out}>{t.outgoing1}</div>
+                      <div className={styles.out}>{t.outgoing1}</div>
 
-                  <div className={styles.inWrap}>
-                    <div className={styles.aiMini}>Ai</div>
-                    <div className={styles.in}>
-                      <div>
-                        <span className="sf-serif" style={{ fontSize: 16 }}>{t.reply.leadItalic}</span>
-                        {t.reply.leadRest}
-                      </div>
-                      <div className={styles.statsRow}>
-                        {t.reply.stats.map((s, i) => (
-                          <div key={i}>
-                            <div className="sf-mono" style={{ fontSize: 22, fontWeight: 700, color: s.color, lineHeight: 1 }}>
-                              {s.value}
-                            </div>
-                            <div className={styles.statL}>{s.label}</div>
+                      <div className={styles.inWrap}>
+                        <div className={styles.aiMini}>Ai</div>
+                        <div className={styles.in}>
+                          <div>
+                            <span className="sf-serif" style={{ fontSize: 16 }}>
+                              {t.reply.leadItalic}
+                            </span>
+                            {t.reply.leadRest}
                           </div>
-                        ))}
-                      </div>
-                      <div className={styles.statsBar}>
-                        {t.reply.bar.map((b, i) => (
-                          <div key={i} style={{ width: b.width, background: b.color }} />
-                        ))}
-                      </div>
-
-                      <div style={{ marginTop: 14, fontSize: 14 }}>{tt('ai.focusTitle')}</div>
-                      <div className={styles.focus}>
-                        {t.reply.focusStudents.map((s, i) => (
-                          <div key={i} className={styles.focusRow}>
-                            <Avatar name={s.name} size={26} />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 12.5, fontWeight: 600 }}>{s.name}</div>
-                              <div style={{ fontSize: 10.5, color: 'var(--sf-warn)' }}>{s.reason}</div>
-                            </div>
-                            <Button
-                              variant="soft"
-                              style={{ padding: '4px 10px', fontSize: 11 }}
-                              onClick={() => navigate('/cards', { state: { issueTo: s.name } })}
-                            >
-                              {tt('ai.giveCard')}
-                            </Button>
+                          <div className={styles.statsRow}>
+                            {t.reply.stats.map((s, i) => (
+                              <div key={i}>
+                                <div
+                                  className="sf-mono"
+                                  style={{
+                                    fontSize: 22,
+                                    fontWeight: 700,
+                                    color: s.color,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  {s.value}
+                                </div>
+                                <div className={styles.statL}>{s.label}</div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                          <div className={styles.statsBar}>
+                            {t.reply.bar.map((b, i) => (
+                              <div key={i} style={{ width: b.width, background: b.color }} />
+                            ))}
+                          </div>
+
+                          <div style={{ marginTop: 14, fontSize: 14 }}>{tt('ai.focusTitle')}</div>
+                          <div className={styles.focus}>
+                            {t.reply.focusStudents.map((s, i) => (
+                              <div key={i} className={styles.focusRow}>
+                                <Avatar name={s.name} size={26} />
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 12.5, fontWeight: 600 }}>{s.name}</div>
+                                  <div style={{ fontSize: 10.5, color: 'var(--sf-warn)' }}>
+                                    {s.reason}
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="soft"
+                                  style={{ padding: '4px 10px', fontSize: 11 }}
+                                  onClick={() => navigate('/cards', { state: { issueTo: s.name } })}
+                                >
+                                  {tt('ai.giveCard')}
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div style={{ marginTop: 12, fontSize: 14 }}>
+                            <span className="sf-serif">{t.reply.recommendationItalic}</span>
+                            {t.reply.recommendationRest}
+                          </div>
+
+                          <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {t.reply.actions.map((a) => (
+                              <Button
+                                key={a.label}
+                                variant="soft"
+                                icon={a.icon}
+                                iconSize={12}
+                                onClick={() => send(a.label)}
+                              >
+                                {a.label}
+                              </Button>
+                            ))}
+                          </div>
+                          <div
+                            className="sf-mono"
+                            style={{ marginTop: 10, fontSize: 9.5, color: 'var(--sf-muted)' }}
+                          >
+                            {t.reply.meta}
+                          </div>
+                        </div>
                       </div>
 
-                      <div style={{ marginTop: 12, fontSize: 14 }}>
-                        <span className="sf-serif">{t.reply.recommendationItalic}</span>
-                        {t.reply.recommendationRest}
-                      </div>
-
-                      <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {t.reply.actions.map((a) => (
-                          <Button key={a.label} variant="soft" icon={a.icon} iconSize={12} onClick={() => send(a.label)}>
-                            {a.label}
-                          </Button>
-                        ))}
-                      </div>
-                      <div className="sf-mono" style={{ marginTop: 10, fontSize: 9.5, color: 'var(--sf-muted)' }}>
-                        {t.reply.meta}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.out}>{t.outgoing2}</div>
+                      <div className={styles.out}>{t.outgoing2}</div>
                     </>
                   )}
 
@@ -363,11 +419,17 @@ export function AiPage() {
                     placeholder={tt('ai.placeholder')}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
+                    disabled={!activeId || usage.unavailable}
                   />
                   <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)' }}>
                     {tt('ai.tokenEst')}
                   </span>
-                  <button type="submit" className={styles.send} aria-label={tt('common.send')}>
+                  <button
+                    type="submit"
+                    className={styles.send}
+                    aria-label={tt('common.send')}
+                    disabled={!activeId || usage.unavailable}
+                  >
                     <Icon name="send" size={16} />
                   </button>
                 </form>
@@ -377,10 +439,13 @@ export function AiPage() {
               <div className={styles.ctx}>
                 <Card title={tt('ai.ctxTitle')}>
                   <div className={styles.ctxRows}>
-                    {d.workspace.context.map((r, i) => (
+                    {workspace.context.map((r, i) => (
                       <div key={i} className={styles.ctxRow}>
                         <span>{r.label}</span>
-                        <span className="sf-mono" style={{ color: r.color || 'var(--sf-ink-2)', fontWeight: 700 }}>
+                        <span
+                          className="sf-mono"
+                          style={{ color: r.color || 'var(--sf-ink-2)', fontWeight: 700 }}
+                        >
                           {r.value}
                         </span>
                       </div>
@@ -388,7 +453,7 @@ export function AiPage() {
                   </div>
                 </Card>
                 <Card title={tt('ai.attentionTitle')}>
-                  {d.workspace.attention.map((s, i, a) => (
+                  {workspace.attention.map((s, i, a) => (
                     <div
                       key={i}
                       style={{
@@ -409,7 +474,7 @@ export function AiPage() {
                 </Card>
                 <Card title={tt('ai.topicsTitle')}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {d.workspace.topics.map((topic) => (
+                    {workspace.topics.map((topic) => (
                       <Chip key={topic} tone="ai">
                         {topic}
                       </Chip>

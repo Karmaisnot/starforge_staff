@@ -213,21 +213,124 @@
   color: var(--sf-ink);
 }
 
+.emptyCard {
+  min-height: 330px;
+}
+.emptyState {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+  text-align: center;
+}
+.emptyMark {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    var(--sf-primary),
+    color-mix(in oklab, var(--sf-primary) 78%, black)
+  );
+  box-shadow: 0 10px 24px color-mix(in oklab, var(--sf-primary) 22%, transparent);
+}
+.emptyTitle {
+  margin: 18px 0 0;
+  font-family: var(--sf-font-display);
+  font-size: 25px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--sf-ink);
+}
+.emptyBody {
+  max-width: 390px;
+  margin: 8px 0 20px;
+  color: var(--sf-muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
 
 /* New-group + attendance modals */
-.gForm { display: flex; flex-direction: column; gap: 14px; }
-.gField { display: flex; flex-direction: column; gap: 6px; }
-.gField > span { font-size: 12px; font-weight: 600; color: var(--sf-ink-2); }
-.gInput { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--sf-border); background: var(--sf-bg); font-family: inherit; font-size: 14px; color: var(--sf-ink); outline: none; }
-.gInput:focus { border-color: var(--sf-primary); }
-.attList { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
-.attRow { display: flex; align-items: center; gap: 10px; padding: 8px; border: none; background: transparent; border-radius: 10px; cursor: pointer; width: 100%; }
-.attRow:hover { background: var(--sf-surface-2); }
-.attCheck { width: 22px; height: 22px; border-radius: 7px; border: 2px solid; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-
+.gForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.gField > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sf-ink-2);
+}
+.gInput {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--sf-border);
+  background: var(--sf-bg);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--sf-ink);
+  outline: none;
+}
+.gInput:focus {
+  border-color: var(--sf-primary);
+}
+.attList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.attRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+.attRow:hover {
+  background: var(--sf-surface-2);
+}
+.attCheck {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
 
 /* Student detail modal */
-.stuMeta { margin-bottom: 16px; color: var(--sf-muted); font-size: 12px; }
-.stuStats { display: flex; gap: 24px; }
-.stuStat { text-align: center; }
-.stuStatL { font-size: 11px; color: var(--sf-muted); margin-top: 2px; }
+.stuMeta {
+  margin-bottom: 16px;
+  color: var(--sf-muted);
+  font-size: 12px;
+}
+.stuStats {
+  display: flex;
+  gap: 24px;
+}
+.stuStat {
+  text-align: center;
+}
+.stuStatL {
+  font-size: 11px;
+  color: var(--sf-muted);
+  margin-top: 2px;
+}

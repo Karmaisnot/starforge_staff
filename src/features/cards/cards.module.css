@@ -108,3 +108,10 @@
 .inputCtl:focus {
   border-color: var(--sf-primary);
 }
+.emptyCopy {
+  margin: 0;
+  padding: 16px 18px;
+  color: var(--sf-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}

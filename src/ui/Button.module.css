@@ -18,6 +18,14 @@
 .btn:active {
   transform: scale(0.97);
 }
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+  transform: none;
+}
+.btn:disabled:hover {
+  background: inherit;
+}
 
 .primary {
   background: var(--sf-primary);

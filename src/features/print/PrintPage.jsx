@@ -75,7 +75,9 @@ function QuickPrint({ library, printers, onAdd }) {
             <Icon name="folder" size={18} />
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 700 }}>{tt('print.fromLibrary')}</div>
-              <div style={{ fontSize: 10, color: 'var(--sf-muted)' }}>{library.fileCount} {tt('print.files')}</div>
+              <div style={{ fontSize: 10, color: 'var(--sf-muted)' }}>
+                {library.fileCount} {tt('print.files')}
+              </div>
             </div>
           </button>
           <button
@@ -98,7 +100,14 @@ function QuickPrint({ library, printers, onAdd }) {
           />
         </div>
         {source === 'upload' && uploadName && (
-          <div style={{ fontSize: 11, color: 'var(--sf-primary)', fontWeight: 600, wordBreak: 'break-all' }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--sf-primary)',
+              fontWeight: 600,
+              wordBreak: 'break-all',
+            }}
+          >
             {tt('print.fileChosen')} · {uploadName}
           </div>
         )}
@@ -143,12 +152,22 @@ function QuickPrint({ library, printers, onAdd }) {
         </div>
         <div className={styles.formRow}>
           <span className={styles.formL}>{tt('print.time')}</span>
-          <span style={{ fontSize: 12, color: 'var(--sf-primary)', fontWeight: 600 }}>{tt('print.timeValue')}</span>
+          <span style={{ fontSize: 12, color: 'var(--sf-primary)', fontWeight: 600 }}>
+            {tt('print.timeValue')}
+          </span>
         </div>
 
         <div className={styles.sum}>
           <div className={styles.sumRow}>
-            <span style={{ fontSize: 10, opacity: 0.7, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 600 }}>
+            <span
+              style={{
+                fontSize: 10,
+                opacity: 0.7,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+              }}
+            >
               {tt('print.final')}
             </span>
             <StarMark size={20} color="var(--sf-accent)" />
@@ -157,7 +176,8 @@ function QuickPrint({ library, printers, onAdd }) {
             {copies} × {PAGES_PER_COPY} = {total} {plural(locale, 'pages', total)}
           </div>
           <div style={{ marginTop: 2, fontSize: 11, opacity: 0.7 }}>
-            {format} · {color === 'bw' ? tt('print.bw') : tt('print.colorful')} · {side} {tt('print.sided')} · HP LaserJet
+            {format} · {color === 'bw' ? tt('print.bw') : tt('print.colorful')} · {side}{' '}
+            {tt('print.sided')} · HP LaserJet
           </div>
         </div>
         <Button variant="primary" block icon="arrowR" iconRight onClick={addToQueue}>
@@ -228,127 +248,178 @@ export function PrintPage() {
     }
   };
   const sendToPrinter = (printer) => {
-    addJob({ printerId: printer.id, doc: printer.name, copies: 1, size: printer.sizes, printer: printer.name, icon: 'print' });
+    addJob({
+      printerId: printer.id,
+      doc: printer.name,
+      copies: 1,
+      size: printer.sizes,
+      printer: printer.name,
+      icon: 'print',
+    });
     toast(printer.name, 'success');
   };
   const focusQuick = () => {
-    document.getElementById('sf-quick-print')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document
+      .getElementById('sf-quick-print')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
     <AsyncBoundary state={state}>
-      {(d) => (
-        <>
-          <PageHeader
-            title={tt('print.title')}
-            subtitle={tt('print.subtitle')}
-            right={
-              <Button variant="primary" icon="plus" onClick={focusQuick}>
-                {tt('print.newPrint')}
-              </Button>
-            }
-          />
+      {(d) =>
+        (() => {
+          const jobs = [...extraJobs, ...d.jobs].filter((job) => !cancelled[job.id]);
+          return (
+            <>
+              <PageHeader
+                title={tt('print.title')}
+                subtitle={`${d.printers.length} ${tt('print.printerCount')} · ${jobs.length} ${tt('print.queueWord')}`}
+                right={
+                  <Button variant="primary" icon="plus" onClick={focusQuick}>
+                    {tt('print.newPrint')}
+                  </Button>
+                }
+              />
 
-          <div className={styles.grid}>
-            <div>
-              <h3 className={styles.sectionH}>{tt('print.myQueue')}</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[...extraJobs, ...d.jobs].filter((j) => !cancelled[j.id]).map((j) => (
-                  <Card key={j.id} padded={false}>
-                    <div style={{ display: 'flex', gap: 14, padding: 16, alignItems: 'center' }}>
-                      <div className={styles.docThumb}>
-                        <Icon name={j.icon ?? 'doc'} size={22} />
-                        <div className={styles.docMult}>×{j.copies}</div>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-                          <div style={{ fontSize: 15, fontWeight: 700 }}>{j.doc}</div>
-                          <Chip tone={j.state === 'now' ? 'primary' : 'accent'}>
-                            {j.state === 'now' ? tt('print.printing') : tt('print.queued')}
-                          </Chip>
-                        </div>
-                        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--sf-muted)' }}>
-                          {j.size} · {j.printer}
-                        </div>
-                        <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center' }}>
-                          <ProgressBar
-                            value={j.progress}
-                            height={6}
-                            color={j.state === 'now' ? 'var(--sf-primary)' : 'var(--sf-accent)'}
-                          />
-                          <span className="sf-mono" style={{ fontSize: 11, color: 'var(--sf-muted)', whiteSpace: 'nowrap' }}>
-                            {j.state === 'now' ? `${j.progress}%` : (j.eta.split(' · ')[1] ?? j.eta)}
-                          </span>
-                        </div>
-                        <div className="sf-mono" style={{ marginTop: 4, fontSize: 10, color: 'var(--sf-muted)' }}>
-                          {j.eta}
-                        </div>
-                      </div>
-                      <button className={styles.iconBtn} onClick={() => cancelJob(j)} aria-label={tt('print.cancelled')}>
-                        <Icon name="x" size={16} />
-                      </button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-
-              <h3 className={styles.sectionH} style={{ marginTop: 28 }}>
-                {tt('print.printers')}
-              </h3>
-              <div className={styles.printersGrid}>
-                {d.printers.map((p) => (
-                  <Card key={p.id} padded={false}>
-                    <div style={{ padding: 16 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div className={styles.printerIcon} style={{ color: p.accent }}>
-                          <Icon name="print" size={26} />
-                          <span
-                            style={{
-                              position: 'absolute',
-                              bottom: 4,
-                              right: 4,
-                              width: 10,
-                              height: 10,
-                              borderRadius: '50%',
-                              background: p.accent,
-                              border: '2px solid var(--sf-surface)',
-                            }}
-                          />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <span style={{ fontSize: 14, fontWeight: 700 }}>{p.name}</span>
-                            {p.color && <Chip tone="accent">{tt('print.colorful')}</Chip>}
+              <div className={styles.grid}>
+                <div>
+                  <h3 className={styles.sectionH}>
+                    {tt('print.myQueue')} · {jobs.length}
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {jobs.map((j) => (
+                      <Card key={j.id} padded={false}>
+                        <div
+                          style={{ display: 'flex', gap: 14, padding: 16, alignItems: 'center' }}
+                        >
+                          <div className={styles.docThumb}>
+                            <Icon name={j.icon ?? 'doc'} size={22} />
+                            <div className={styles.docMult}>×{j.copies}</div>
                           </div>
-                          <div style={{ fontSize: 11, color: 'var(--sf-muted)', marginTop: 1 }}>
-                            {p.location} · {p.sizes}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}
+                            >
+                              <div style={{ fontSize: 15, fontWeight: 700 }}>{j.doc}</div>
+                              <Chip tone={j.state === 'now' ? 'primary' : 'accent'}>
+                                {j.state === 'now' ? tt('print.printing') : tt('print.queued')}
+                              </Chip>
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 12, color: 'var(--sf-muted)' }}>
+                              {j.size} · {j.printer}
+                            </div>
+                            <div
+                              style={{
+                                marginTop: 12,
+                                display: 'flex',
+                                gap: 10,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <ProgressBar
+                                value={j.progress}
+                                height={6}
+                                color={j.state === 'now' ? 'var(--sf-primary)' : 'var(--sf-accent)'}
+                              />
+                              <span
+                                className="sf-mono"
+                                style={{
+                                  fontSize: 11,
+                                  color: 'var(--sf-muted)',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {j.state === 'now'
+                                  ? `${j.progress}%`
+                                  : (j.eta.split(' · ')[1] ?? j.eta)}
+                              </span>
+                            </div>
+                            <div
+                              className="sf-mono"
+                              style={{ marginTop: 4, fontSize: 10, color: 'var(--sf-muted)' }}
+                            >
+                              {j.eta}
+                            </div>
+                          </div>
+                          <button
+                            className={styles.iconBtn}
+                            onClick={() => cancelJob(j)}
+                            aria-label={tt('print.cancelled')}
+                          >
+                            <Icon name="x" size={16} />
+                          </button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+
+                  <h3 className={styles.sectionH} style={{ marginTop: 28 }}>
+                    {tt('print.printers')}
+                  </h3>
+                  <div className={styles.printersGrid}>
+                    {d.printers.map((p) => (
+                      <Card key={p.id} padded={false}>
+                        <div style={{ padding: 16 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div className={styles.printerIcon} style={{ color: p.accent }}>
+                              <Icon name="print" size={26} />
+                              <span
+                                style={{
+                                  position: 'absolute',
+                                  bottom: 4,
+                                  right: 4,
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: '50%',
+                                  background: p.accent,
+                                  border: '2px solid var(--sf-surface)',
+                                }}
+                              />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                <span style={{ fontSize: 14, fontWeight: 700 }}>{p.name}</span>
+                                {p.color && <Chip tone="accent">{tt('print.colorful')}</Chip>}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--sf-muted)', marginTop: 1 }}>
+                                {p.location} · {p.sizes}
+                              </div>
+                            </div>
+                            <Chip tone={printerStatusTone(p.status)}>
+                              {p.status === 'free'
+                                ? tt('print.free')
+                                : p.status === 'busy'
+                                  ? `${p.queue} ${tt('print.queueWord')}`
+                                  : tt('print.locked')}
+                            </Chip>
+                          </div>
+                          <div className={styles.printerEta}>
+                            <Icon name="clock" size={14} style={{ color: p.accent }} />
+                            <span style={{ flex: 1 }}>{p.eta}</span>
+                            {p.status !== 'locked' && (
+                              <Button
+                                variant="soft"
+                                style={{ padding: '4px 10px', fontSize: 11 }}
+                                onClick={() => sendToPrinter(p)}
+                              >
+                                {tt('print.send')}
+                              </Button>
+                            )}
                           </div>
                         </div>
-                        <Chip tone={printerStatusTone(p.status)}>
-                          {p.status === 'free' ? tt('print.free') : p.status === 'busy' ? `${p.queue} ${tt('print.queueWord')}` : tt('print.locked')}
-                        </Chip>
-                      </div>
-                      <div className={styles.printerEta}>
-                        <Icon name="clock" size={14} style={{ color: p.accent }} />
-                        <span style={{ flex: 1 }}>{p.eta}</span>
-                        {p.status !== 'locked' && (
-                          <Button variant="soft" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => sendToPrinter(p)}>
-                            {tt('print.send')}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
 
-            <div id="sf-quick-print">
-              <QuickPrint library={d.library} printers={d.printers} onAdd={addJob} />
-            </div>
-          </div>
-        </>
-      )}
+                <div id="sf-quick-print">
+                  <QuickPrint library={d.library} printers={d.printers} onAdd={addJob} />
+                </div>
+              </div>
+            </>
+          );
+        })()
+      }
     </AsyncBoundary>
   );
 }

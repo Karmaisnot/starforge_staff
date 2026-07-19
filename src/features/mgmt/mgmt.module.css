@@ -171,6 +171,47 @@
   color: var(--sf-muted);
   font-size: 13px;
 }
+.emptyPage {
+  min-height: 330px;
+}
+.emptyPageInner {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 24px;
+  text-align: center;
+}
+.emptyMark {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 17px;
+  background: linear-gradient(
+    135deg,
+    var(--sf-ink),
+    color-mix(in oklab, var(--sf-primary) 52%, var(--sf-ink))
+  );
+  box-shadow: 0 10px 24px color-mix(in oklab, var(--sf-ink) 15%, transparent);
+}
+.emptyTitle {
+  margin: 18px 0 0;
+  color: var(--sf-ink);
+  font-family: var(--sf-font-display);
+  font-size: 25px;
+  font-style: italic;
+  font-weight: 400;
+}
+.emptyCopy {
+  max-width: 390px;
+  margin: 8px 0 20px;
+  color: var(--sf-muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
 .input {
   padding: 12px 18px;
   display: flex;
@@ -213,10 +254,33 @@
   flex-shrink: 0;
 }
 
-
 /* Compose-message modal */
-.composeForm { display: flex; flex-direction: column; gap: 14px; }
-.composeField { display: flex; flex-direction: column; gap: 6px; }
-.composeField > span { font-size: 12px; font-weight: 600; color: var(--sf-ink-2); }
-.composeInput { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--sf-border); background: var(--sf-bg); font-family: inherit; font-size: 14px; color: var(--sf-ink); outline: none; resize: vertical; }
-.composeInput:focus { border-color: var(--sf-primary); }
+.composeForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.composeField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.composeField > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sf-ink-2);
+}
+.composeInput {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--sf-border);
+  background: var(--sf-bg);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--sf-ink);
+  outline: none;
+  resize: vertical;
+}
+.composeInput:focus {
+  border-color: var(--sf-primary);
+}

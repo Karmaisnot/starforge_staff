@@ -82,80 +82,111 @@ export function NotificationsPage() {
 
   return (
     <AsyncBoundary state={state}>
-      {(d) => (
-        <>
-          <PageHeader
-            title={t('notifications.title')}
-            subtitle={t('notifications.subtitle')}
-            right={
-              <>
-                <div className={styles.filters}>
-                  {d.filters.map((f) => (
-                    <FilterChip
-                      key={f.key}
-                      label={f.label}
-                      count={f.count}
-                      active={filter === f.key}
-                      onClick={() => setFilter(f.key)}
-                    />
-                  ))}
-                </div>
-                <Button variant="soft" icon="check" onClick={() => markAllRead(d.groups)}>
-                  {t('notifications.markAll')}
-                </Button>
-              </>
-            }
-          />
+      {(d) => {
+        const items = d.groups.flatMap((group) => group.items);
+        const unread = items.filter((item) => !isRowRead(item)).length;
+        return (
+          <>
+            <PageHeader
+              title={t('notifications.title')}
+              subtitle={`${items.length} ${t('notifications.total')} · ${unread} ${t('notifications.unread')}`}
+              right={
+                <>
+                  <div className={styles.filters}>
+                    {d.filters.map((f) => (
+                      <FilterChip
+                        key={f.key}
+                        label={f.label}
+                        count={f.count}
+                        active={filter === f.key}
+                        onClick={() => setFilter(f.key)}
+                      />
+                    ))}
+                  </div>
+                  <Button variant="soft" icon="check" onClick={() => markAllRead(d.groups)}>
+                    {t('notifications.markAll')}
+                  </Button>
+                </>
+              }
+            />
 
-          <div className={styles.list}>
-            {d.groups.map((g) => (
-              <div key={g.label}>
-                <div className={styles.groupLabel}>{g.label}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {g.items
-                    .filter((it) => filter === 'all' || matchesFilter(it, filter))
-                    .map((it) => {
-                      const c = notificationToneStyle(it.tone);
-                      // Stable key from the backend item id — survives filter
-                      // changes and is also the id we persist read-state under,
-                      // so per-row and mark-all stay perfectly in sync.
-                      const isRead = isRowRead(it);
-                      return (
-                        <button
-                          key={it.id}
-                          className={styles.row}
-                          style={{ opacity: isRead ? 0.5 : 1 }}
-                          onClick={() => markRead(it.id)}
-                        >
-                          <div className={styles.icon} style={{ background: c.bg, color: c.fg, borderColor: c.border }}>
-                            {it.icon === 'AI' ? (
-                              <span className="sf-serif" style={{ fontWeight: 600, fontSize: 14 }}>
-                                Ai
-                              </span>
-                            ) : (
-                              <Icon name={it.icon} size={18} />
-                            )}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700 }}>{it.title}</span>
-                              <span className="sf-mono" style={{ fontSize: 10, color: 'var(--sf-muted)', whiteSpace: 'nowrap' }}>
-                                {it.time}
-                              </span>
+            <div className={styles.list}>
+              {d.groups.map((g) => (
+                <div key={g.label}>
+                  <div className={styles.groupLabel}>{g.label}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {g.items
+                      .filter((it) => filter === 'all' || matchesFilter(it, filter))
+                      .map((it) => {
+                        const c = notificationToneStyle(it.tone);
+                        // Stable key from the backend item id — survives filter
+                        // changes and is also the id we persist read-state under,
+                        // so per-row and mark-all stay perfectly in sync.
+                        const isRead = isRowRead(it);
+                        return (
+                          <button
+                            key={it.id}
+                            className={styles.row}
+                            style={{ opacity: isRead ? 0.5 : 1 }}
+                            onClick={() => markRead(it.id)}
+                          >
+                            <div
+                              className={styles.icon}
+                              style={{ background: c.bg, color: c.fg, borderColor: c.border }}
+                            >
+                              {it.icon === 'AI' ? (
+                                <span
+                                  className="sf-serif"
+                                  style={{ fontWeight: 600, fontSize: 14 }}
+                                >
+                                  Ai
+                                </span>
+                              ) : (
+                                <Icon name={it.icon} size={18} />
+                              )}
                             </div>
-                            <div style={{ marginTop: 3, fontSize: 13, color: 'var(--sf-muted)', lineHeight: 1.45 }}>
-                              {it.body}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'baseline',
+                                  gap: 8,
+                                }}
+                              >
+                                <span style={{ fontSize: 14, fontWeight: 700 }}>{it.title}</span>
+                                <span
+                                  className="sf-mono"
+                                  style={{
+                                    fontSize: 10,
+                                    color: 'var(--sf-muted)',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {it.time}
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  marginTop: 3,
+                                  fontSize: 13,
+                                  color: 'var(--sf-muted)',
+                                  lineHeight: 1.45,
+                                }}
+                              >
+                                {it.body}
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+              ))}
+            </div>
+          </>
+        );
+      }}
     </AsyncBoundary>
   );
 }
