@@ -6,5 +6,11 @@ dist-ssr
 .DS_Store
 *.log
 
+# Generated design-tool and local capture artifacts
+/.design-canvas.state.json
+/.thumbnail
+/screenshots/
+/uploads/
+
 # local env (keep machine-local; copy from .env.example if added)
 .env

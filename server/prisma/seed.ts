@@ -12,8 +12,8 @@ import { PrismaClient } from '@prisma/client';
 import { loc } from '../src/shared/locale';
 import { hashPassword } from '../src/shared/password';
 import { CardKind, StudentFlag, TaskColumnId } from '../src/domain/enums';
-// Per-domain seed modules (cards are already seeded above to realise cohort
-// up/down targets, so seedCards is intentionally not called here).
+// Per-domain seed modules. Cards are seeded inline below because their totals
+// are coupled to the cohort and student records created in this file.
 import { seedTasks } from './seeds/tasks';
 import { seedAi } from './seeds/ai';
 import { seedPrint } from './seeds/print';

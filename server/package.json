@@ -14,9 +14,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:reset": "prisma migrate reset --force",
-    "db:seed": "tsx prisma/seed.ts",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "db:seed": "tsx prisma/seed.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -34,11 +32,9 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.10.5",
-    "pino-pretty": "^13.0.0",
     "prisma": "^6.2.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3",
-    "vitest": "^4.0.0"
+    "typescript": "^5.7.3"
   },
   "engines": {
     "node": ">=20.11.0"

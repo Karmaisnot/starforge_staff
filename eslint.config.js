@@ -5,10 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  // Root-level *.jsx files are archived design/prototype fragments. The Vite
-  // application lives in src/, so linting those incomplete standalone samples
-  // only hides actionable diagnostics from the shipped code.
-  { ignores: ['dist', 'node_modules', '*.jsx'] },
+  { ignores: ['dist', 'node_modules'] },
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
